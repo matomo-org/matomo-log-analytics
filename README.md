@@ -1,9 +1,11 @@
-# Piwik Server Log Analytics: Import your server logs in Piwik!
+# Piwik Server Log Analytics
+
+Import your server logs in Piwik with this powerful and easy to use tool.
 
 ## Requirements
 
 * Python 2.6 or 2.7. Python 3.x is not supported.
-* Update to Piwik 1.11
+* Piwik >= 2.6.0
 
 ## Contributors
 
