@@ -194,7 +194,7 @@ class RegexFormat(BaseFormat):
         try:
             return self.matched[key]
         except KeyError:
-            raise BaseFormatException()
+            raise BaseFormatException("Cannot find group '%s'." % key)
 
     def get_all(self,):
         return self.matched
@@ -1555,13 +1555,18 @@ class Recorder(object):
                 on_failure=self._on_tracking_failure
             )
 
-            # make sure the request succeeded and returned valid json
-            try:
-                result = json.loads(result)
-            except ValueError, e:
+            # make sure the request succeeded and returned valid json or string that looks like gif
+            if not result.startswith('GIF89') and not self._is_json(result):
                 fatal_error("Incorrect response from tracking API: '%s'\nIs the BulkTracking plugin disabled?" % result)
 
         stats.count_lines_recorded.advance(len(hits))
+
+    def _is_json(self, result):
+        try:
+            json.loads(result)
+            return True
+        except ValueError, e:
+            return False
 
     def _on_tracking_failure(self, response, data):
         """
