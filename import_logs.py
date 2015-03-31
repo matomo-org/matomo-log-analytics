@@ -215,6 +215,7 @@ class W3cExtendedFormat(RegexFormat):
         'c-ip': '"?(?P<ip>[\d*.]*)"?',
         'cs(User-Agent)': '(?P<user_agent>".*?"|\S+)',
         'cs(Referer)': '(?P<referrer>\S+)',
+        'cs(Cookie)': '(?P<cookie>".*?"|\S+)',
         'sc-status': '(?P<status>\d+)',
         'sc-bytes': '(?P<length>\S+)',
         'cs-host': '(?P<host>\S+)',

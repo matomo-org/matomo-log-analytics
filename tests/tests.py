@@ -69,7 +69,7 @@ def test_format_detection():
         if log_file is None:
             log_file = 'logs/%s.log' % format_name
 
-        tmp_path = add_multiple_spaces_to_file(log_file) # TODO
+        tmp_path = add_multiple_spaces_to_file(log_file)
 
         file = open(tmp_path)
         import_logs.config = Config()
@@ -147,6 +147,7 @@ class Options(object):
     regex_group_to_visit_cvars_map = {}
     regex_group_to_page_cvars_map = {}
     regex_groups_to_ignore = None
+    replay_tracking_expected_tracker_file = 'piwik.php'
 
 class Config(object):
     """Mock configuration."""
@@ -312,7 +313,7 @@ def check_iis_groups(groups):
 
     expected_hit_properties = ['date', 'path', 'query_string', 'ip', 'referrer', 'user_agent',
                                'status', 'length', 'host', 'userid', 'generation_time_milli',
-                               '__win32_status']
+                               '__win32_status', 'cookie']
 
     for property_name in groups.keys():
         assert property_name in expected_hit_properties
