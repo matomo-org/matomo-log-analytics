@@ -410,7 +410,7 @@ def test_iis_custom_format():
     assert hits[0]['filename'] == 'logs/iis_custom.log'
     assert hits[0]['is_redirect'] == False
     assert hits[0]['date'] == datetime.datetime(2012, 8, 15, 17, 0)
-    assert hits[0]['lineno'] == 4
+    assert hits[0]['lineno'] == 7
     assert hits[0]['ip'] == u'70.95.0.0'
     assert hits[0]['query_string'] == ''
     assert hits[0]['path'] == u'/Products/theProduct'
@@ -429,7 +429,7 @@ def test_iis_custom_format():
     assert hits[1]['filename'] == 'logs/iis_custom.log'
     assert hits[1]['is_redirect'] == True
     assert hits[1]['date'] == datetime.datetime(2012, 8, 15, 17, 0)
-    assert hits[1]['lineno'] == 5
+    assert hits[1]['lineno'] == 8
     assert hits[1]['ip'] == '70.95.32.0'
     assert hits[1]['query_string'] == ''
     assert hits[1]['path'] == u'/Topic/hw43061'
@@ -448,7 +448,7 @@ def test_iis_custom_format():
     assert hits[2]['filename'] == 'logs/iis_custom.log'
     assert hits[2]['is_redirect'] == False
     assert hits[2]['date'] == datetime.datetime(2012, 8, 15, 17, 0)
-    assert hits[2]['lineno'] == 6
+    assert hits[2]['lineno'] == 9
     assert hits[2]['ip'] == u'173.5.0.0'
     assert hits[2]['query_string'] == ''
     assert hits[2]['path'] == u'/hello/world/6,681965'

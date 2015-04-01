@@ -248,7 +248,10 @@ class W3cExtendedFormat(RegexFormat):
         # if we're reading from stdin, we can't seek, so don't read any more than the Fields line
         header_lines = []
         while fields_line is None:
-            line = file.readline()
+            line = file.readline().strip()
+
+            if not line:
+                continue
 
             if not line.startswith('#'):
                 break
@@ -282,14 +285,17 @@ class W3cExtendedFormat(RegexFormat):
             expected_fields[field_name] = field_regex
 
         # Skip the 'Fields: ' prefix.
-        fields_line = fields_line[9:]
-        for field in fields_line.split():
+        fields_line = fields_line[9:].strip()
+        for field in re.split('\s+', fields_line):
             try:
                 regex = expected_fields[field]
             except KeyError:
                 regex = '\S+'
             full_regex.append(regex)
         full_regex = '\s+'.join(full_regex)
+
+        logging.debug("Based on 'Fields:' line, computed regex to be %s", full_regex)
+
         self.regex = re.compile(full_regex)
 
     def check_for_iis_option(self):
