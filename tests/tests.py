@@ -430,7 +430,7 @@ def test_iis_custom_format():
     assert hits[1]['is_redirect'] == True
     assert hits[1]['date'] == datetime.datetime(2012, 8, 15, 17, 0)
     assert hits[1]['lineno'] == 8
-    assert hits[1]['ip'] == '70.95.32.0'
+    assert hits[1]['ip'] == '-'
     assert hits[1]['query_string'] == ''
     assert hits[1]['path'] == u'/Topic/hw43061'
     assert hits[1]['is_robot'] == False

@@ -212,10 +212,9 @@ class W3cExtendedFormat(RegexFormat):
         'time': '[\d+:]+)[.\d]*?', # TODO should not assume date & time will be together not sure how to fix ATM.
         'cs-uri-stem': '(?P<path>/\S*)',
         'cs-uri-query': '(?P<query_string>\S*)',
-        'c-ip': '"?(?P<ip>[\d*.]*)"?',
+        'c-ip': '"?(?P<ip>[\d*.-]*)"?',
         'cs(User-Agent)': '(?P<user_agent>".*?"|\S+)',
         'cs(Referer)': '(?P<referrer>\S+)',
-        'cs(Cookie)': '(?P<cookie>".*?"|\S+)',
         'sc-status': '(?P<status>\d+)',
         'sc-bytes': '(?P<length>\S+)',
         'cs-host': '(?P<host>\S+)',
@@ -290,7 +289,7 @@ class W3cExtendedFormat(RegexFormat):
             try:
                 regex = expected_fields[field]
             except KeyError:
-                regex = '\S+'
+                regex = '(?:".*?"|\S+)'
             full_regex.append(regex)
         full_regex = '\s+'.join(full_regex)
 
