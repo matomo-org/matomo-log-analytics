@@ -97,8 +97,8 @@ EXCLUDED_USER_AGENTS = (
     'yandex',
 )
 
-PIWIK_MAX_ATTEMPTS = 3
-PIWIK_DELAY_AFTER_FAILURE = 2
+PIWIK_DEFAULT_MAX_ATTEMPTS = 10
+PIWIK_DEFAULT_DELAY_AFTER_FAILURE = 10
 
 PIWIK_EXPECTED_IMAGE = base64.b64decode(
     'R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
@@ -675,6 +675,14 @@ class Configuration(object):
                  "custom variable named 'User Name'. See documentation for --log-format-regex for list of available "
                  "regex groups."
         )
+        option_parser.add_option(
+            '--max-tracking-retries', dest='max_attempts', default=PIWIK_DEFAULT_MAX_ATTEMPTS, type='int',
+            help="The maximum number of times to retry a failed tracking request."
+        )
+        option_parser.add_option(
+            '--tracking-retry-delay', dest='delay_after_failure', default=PIWIK_DEFAULT_DELAY_AFTER_FAILURE, type='int',
+            help="The number of seconds to wait before retrying a failed tracking request."
+        )
         return option_parser
 
     def _set_option_map(self, option_attr_name, option, opt_str, value, parser):
@@ -1186,19 +1194,25 @@ class Piwik(object):
                     raise urllib2.URLError(error_message)
                 return response
             except (urllib2.URLError, httplib.HTTPException, ValueError), e:
-                logging.debug('Error when connecting to Piwik: %s', e)
+                logging.info('Error when connecting to Piwik: %s', e)
+
+                if isinstance(e, urllib2.HTTPError):
+                    # See Python issue 13211.
+                    message = e.msg
+                elif isinstance(e, urllib2.URLError):
+                    message = e.reason
+                else:
+                    message = str(e)
+
                 errors += 1
-                if errors == PIWIK_MAX_ATTEMPTS:
-                    if isinstance(e, urllib2.HTTPError):
-                        # See Python issue 13211.
-                        message = e.msg
-                    elif isinstance(e, urllib2.URLError):
-                        message = e.reason
-                    else:
-                        message = str(e)
+                if errors == config.options.max_attempts:
+                    logging.info("Max number of attempts reached, server is unreachable!")
+
                     raise Piwik.Error(message)
                 else:
-                    time.sleep(PIWIK_DELAY_AFTER_FAILURE)
+                    logging.info("Retrying request, attempt number %d" % (errors + 1))
+
+                    time.sleep(config.options.delay_after_failure)
 
     @classmethod
     def call(cls, path, args, expected_content=None, headers=None, data=None, on_failure=None):
