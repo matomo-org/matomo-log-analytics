@@ -676,11 +676,11 @@ class Configuration(object):
                  "regex groups."
         )
         option_parser.add_option(
-            '--max-tracking-retries', dest='max_attempts', default=PIWIK_DEFAULT_MAX_ATTEMPTS, type='int',
+            '--retry-max-attempts', dest='max_attempts', default=PIWIK_DEFAULT_MAX_ATTEMPTS, type='int',
             help="The maximum number of times to retry a failed tracking request."
         )
         option_parser.add_option(
-            '--tracking-retry-delay', dest='delay_after_failure', default=PIWIK_DEFAULT_DELAY_AFTER_FAILURE, type='int',
+            '--retry-delay', dest='delay_after_failure', default=PIWIK_DEFAULT_DELAY_AFTER_FAILURE, type='int',
             help="The number of seconds to wait before retrying a failed tracking request."
         )
         return option_parser
