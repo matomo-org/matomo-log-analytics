@@ -95,15 +95,15 @@ def test_format_detection():
         yield f
 
     # add tests for amazon cloudfront (normal web + rtmp)
-    f = functools.partial(_test, 'w3c_extended', 'logs/amazon_cloudfront_web.log')
+    f = functools.partial(_test, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
     f.description = 'Testing autodetection of amazon cloudfront (web) logs.'
     yield f
 
-    f = functools.partial(_test_junk, 'w3c_extended', 'logs/amazon_cloudfront_web.log')
+    f = functools.partial(_test_junk, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
     f.description = 'Testing autodetection of amazon cloudfront (web) logs w/ garbage at end of line'
     yield f
 
-    f = functools.partial(_test_multiple_spaces, 'w3c_extended', 'logs/amazon_cloudfront_web.log')
+    f = functools.partial(_test_multiple_spaces, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
     f.description = 'Testing autodetection of format amazon cloudfront (web) logs when multiple spaces separate fields'
     yield f
 
@@ -530,7 +530,7 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['path'] == u'/view/my/file.html'
     assert hits[0]['is_robot'] == False
     assert hits[0]['full_path'] == u'/view/my/file.html'
-    assert hits[0]['user_agent'] == u'Mozilla/4.0%20(compatible;%20MSIE%205.0b1;%20Mac_PowerPC)'
+    assert hits[0]['user_agent'] == u'Mozilla/4.0 (compatible; MSIE 5.0b1; Mac_PowerPC)'
 
     assert len(hits) == 1
 
@@ -569,7 +569,7 @@ def test_amazon_cloudfront_rtmp_parsing():
     assert hits[0]['extension'] == u'net/cfx/st\u200b'
     assert hits[0]['referrer'] == ''
     assert hits[0]['userid'] == None
-    assert hits[0]['user_agent'] == u'LNX%2010,0,32,18'
+    assert hits[0]['user_agent'] == u'LNX 10,0,32,18'
     assert hits[0]['generation_time_milli'] == 0
     assert hits[0]['query_string'] == u'key=value'
     assert hits[0]['is_robot'] == False
@@ -593,7 +593,7 @@ def test_amazon_cloudfront_rtmp_parsing():
     assert hits[1]['referrer'] == ''
     assert hits[1]['userid'] == None
     assert hits[1]['length'] == 3914
-    assert hits[1]['user_agent'] == u'LNX%2010,0,32,18'
+    assert hits[1]['user_agent'] == u'LNX 10,0,32,18'
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['query_string'] == u'key=value'
     assert hits[1]['is_robot'] == False

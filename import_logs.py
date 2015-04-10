@@ -332,7 +332,13 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         'x-event': '(?P<event_action>\S+)',
         'x-sname': '(?P<event_name>\S+)',
         'cs-uri-stem': '(?:rtmp:/)?(?P<path>/\S*)',
-        'c-user-agent': '(?P<user_agent>".*?"|\S+)'
+        'c-user-agent': '(?P<user_agent>".*?"|\S+)',
+
+        # following are present to match cloudfront instead of W3C when we know it's cloudfront
+        'x-edge-location': '(?P<x_edge_location>".*?"|\S+)',
+        'x-edge-result-type': '(?P<x_edge_result_type>".*?"|\S+)',
+        'x-edge-request-id': '(?P<x_edge_request_id>".*?"|\S+)',
+        'x-host-header': '(?P<x_host_header>".*?"|\S+)'
     })
 
     def __init__(self):
@@ -345,6 +351,9 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
             return 'cloudfront_rtmp'
         elif key == 'status' and 'status' not in self.matched:
             return '200'
+        elif key == 'user_agent':
+            user_agent = super(AmazonCloudFrontFormat, self).get(key)
+            return urllib2.unquote(user_agent)
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
@@ -1769,6 +1778,9 @@ class Parser(object):
                 try:
                     # if there's more info in this match, use this format
                     match_groups = len(match.groups())
+
+                    logging.debug('Format match contains %d groups' % match_groups)
+
                     if format_groups < match_groups:
                         format = candidate_format
                         format_groups = match_groups
