@@ -38,6 +38,7 @@ import urlparse
 import subprocess
 import functools
 import traceback
+import socket
 
 try:
     import json
@@ -99,6 +100,7 @@ EXCLUDED_USER_AGENTS = (
 
 PIWIK_DEFAULT_MAX_ATTEMPTS = 10
 PIWIK_DEFAULT_DELAY_AFTER_FAILURE = 10
+DEFAULT_SOCKET_TIMEOUT = 300
 
 PIWIK_EXPECTED_IMAGE = base64.b64decode(
     'R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
@@ -692,6 +694,10 @@ class Configuration(object):
             '--retry-delay', dest='delay_after_failure', default=PIWIK_DEFAULT_DELAY_AFTER_FAILURE, type='int',
             help="The number of seconds to wait before retrying a failed tracking request."
         )
+        option_parser.add_option(
+            '--request-timeout', dest='request_timeout', default=DEFAULT_SOCKET_TIMEOUT, type='int',
+            help="The maximum number of seconds to wait before terminating an HTTP request to Piwik."
+        )
         return option_parser
 
     def _set_option_map(self, option_attr_name, option, opt_str, value, parser):
@@ -1144,7 +1150,7 @@ class Piwik(object):
 
         headers['User-Agent'] = 'Piwik/LogImport'
         request = urllib2.Request(url + path, data, headers)
-        response = urllib2.urlopen(request)
+        response = urllib2.urlopen(request, timeout = config.options.request_timeout)
         result = response.read()
         response.close()
         return result
@@ -1209,7 +1215,7 @@ class Piwik(object):
 
                     raise urllib2.URLError(error_message)
                 return response
-            except (urllib2.URLError, httplib.HTTPException, ValueError), e:
+            except (urllib2.URLError, httplib.HTTPException, ValueError, socket.timeout), e:
                 logging.info('Error when connecting to Piwik: %s', e)
 
                 if isinstance(e, urllib2.HTTPError):
