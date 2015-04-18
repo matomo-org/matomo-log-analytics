@@ -1129,7 +1129,11 @@ class Piwik(object):
     """
 
     class Error(Exception):
-        pass
+
+        def __init__(self, message, code = None):
+            super(Exception, self).__init__(message)
+
+            self.code = code
 
     @staticmethod
     def _call(path, args, headers=None, url=None, data=None):
@@ -1218,9 +1222,11 @@ class Piwik(object):
             except (urllib2.URLError, httplib.HTTPException, ValueError, socket.timeout), e:
                 logging.info('Error when connecting to Piwik: %s', e)
 
+                code = None
                 if isinstance(e, urllib2.HTTPError):
                     # See Python issue 13211.
                     message = e.msg
+                    code = e.code
                 elif isinstance(e, urllib2.URLError):
                     message = e.reason
                 else:
@@ -1230,7 +1236,7 @@ class Piwik(object):
                 if errors == config.options.max_attempts:
                     logging.info("Max number of attempts reached, server is unreachable!")
 
-                    raise Piwik.Error(message)
+                    raise Piwik.Error(message, code)
                 else:
                     logging.info("Retrying request, attempt number %d" % (errors + 1))
 
@@ -1588,17 +1594,20 @@ class Recorder(object):
                 'token_auth': config.options.piwik_token_auth,
                 'requests': [self._get_hit_args(hit) for hit in hits]
             }
-            result = piwik.call(
-                '/piwik.php', args={},
-                expected_content=None,
-                headers={'Content-type': 'application/json'},
-                data=data,
-                on_failure=self._on_tracking_failure
-            )
+            try:
+                piwik.call(
+                    '/piwik.php', args={},
+                    expected_content=None,
+                    headers={'Content-type': 'application/json'},
+                    data=data,
+                    on_failure=self._on_tracking_failure
+                )
+            except Piwik.Error, e:
+                # if the server returned 400 code, BulkTracking may not be enabled
+                if e.code == 400:
+                    fatal_error("Server returned status 400 (Bad Request).\nIs the BulkTracking plugin disabled?")
 
-            # make sure the request succeeded and returned valid json or string that looks like gif
-            if not result.startswith('GIF89') and not self._is_json(result):
-                fatal_error("Incorrect response from tracking API: '%s'\nIs the BulkTracking plugin disabled?" % result)
+                raise
 
         stats.count_lines_recorded.advance(len(hits))
 
