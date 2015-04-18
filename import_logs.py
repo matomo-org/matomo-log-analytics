@@ -1737,7 +1737,10 @@ class Parser(object):
 
     def check_http_error(self, hit):
         if hit.status[0] in ('4', '5'):
-            if config.options.enable_http_errors:
+            if config.options.replay_tracking:
+                # process error logs for replay tracking, since we don't care if piwik error-ed the first time
+                return True
+            elif config.options.enable_http_errors:
                 hit.is_error = True
                 return True
             else:
