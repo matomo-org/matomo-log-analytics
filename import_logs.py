@@ -1135,6 +1135,17 @@ class Piwik(object):
 
             self.code = code
 
+    class RedirectHandlerWithLogging(urllib2.HTTPRedirectHandler):
+        """
+        Special implementation of HTTPRedirectHandler that logs redirects in debug mode
+        to help users debug system issues.
+        """
+
+        def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+            logging.debug("Request redirected (code: %s) to '%s'" % (code, newurl))
+
+            return urllib2.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, hdrs, newurl)
+
     @staticmethod
     def _call(path, args, headers=None, url=None, data=None):
         """
@@ -1153,8 +1164,10 @@ class Piwik(object):
             data = json.dumps(data)
 
         headers['User-Agent'] = 'Piwik/LogImport'
+
         request = urllib2.Request(url + path, data, headers)
-        response = urllib2.urlopen(request, timeout = config.options.request_timeout)
+        opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
+        response = opener.open(request, timeout = config.options.request_timeout)
         result = response.read()
         response.close()
         return result
@@ -1197,8 +1210,7 @@ class Piwik(object):
         try:
             return json.loads(res)
         except ValueError:
-            truncate_after = 4000
-            raise urllib2.URLError('Piwik returned an invalid response: ' + res[:truncate_after])
+            raise urllib2.URLError('Piwik returned an invalid response: ' + res)
 
     @staticmethod
     def _call_wrapper(func, expected_response, on_failure, *args, **kwargs):
@@ -1213,9 +1225,7 @@ class Piwik(object):
                     if on_failure is not None:
                         error_message = on_failure(response, kwargs.get('data'))
                     else:
-                        truncate_after = 4000
-                        truncated_response = (response[:truncate_after] + '..') if len(response) > truncate_after else response
-                        error_message = "didn't receive the expected response. Response was %s " % truncated_response
+                        error_message = "didn't receive the expected response. Response was %s " % response
 
                     raise urllib2.URLError(error_message)
                 return response
@@ -1225,12 +1235,16 @@ class Piwik(object):
                 code = None
                 if isinstance(e, urllib2.HTTPError):
                     # See Python issue 13211.
-                    message = e.msg
+                    message = 'HTTP Error %s %s' % (e.code, e.msg)
                     code = e.code
                 elif isinstance(e, urllib2.URLError):
                     message = e.reason
                 else:
                     message = str(e)
+
+                # decorate message w/ HTTP response, if it can be retrieved
+                if hasattr(e, 'read'):
+                    message = message + ", response: " + e.read()
 
                 errors += 1
                 if errors == config.options.max_attempts:
