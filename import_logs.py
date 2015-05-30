@@ -1469,7 +1469,12 @@ class Recorder(object):
 
     def _run_bulk(self):
         while True:
-            hits = self.queue.get()
+            try:
+                hits = self.queue.get()
+            except:
+                logging.info("Queue does not exist anymore, exception details: " + sys.exc_info()[0])
+                return
+
             if len(hits) > 0:
                 try:
                     self._record_hits(hits)
