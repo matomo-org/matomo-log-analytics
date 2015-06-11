@@ -1309,10 +1309,9 @@ class DynamicResolver(object):
             self._cache['sites'] = piwik.call_api('SitesManager.getAllSites')
 
     def _get_site_id_from_hit_host(self, hit):
-        main_url = 'http://' + hit.host
         return piwik.call_api(
             'SitesManager.getSitesIdFromSiteUrl',
-            url=main_url,
+            url=hit.host,
         )
 
     def _add_site(self, hit):
