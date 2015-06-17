@@ -1165,9 +1165,14 @@ class Piwik(object):
 
         headers['User-Agent'] = 'Piwik/LogImport'
 
+        try:
+            timeout = config.options.request_timeout
+        except:
+            timeout = None # the config global object may not be created at this point
+
         request = urllib2.Request(url + path, data, headers)
         opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
-        response = opener.open(request, timeout = config.options.request_timeout)
+        response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
         return result
