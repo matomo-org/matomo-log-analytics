@@ -563,6 +563,10 @@ class Configuration(object):
                  "Overrides --log-format-name." % (', '.join(available_regex_groups))
         )
         option_parser.add_option(
+            '--log-date-format', dest='log_date_format', default=None,
+            help="Format string used to parse dates."
+        )
+        option_parser.add_option(
             '--log-hostname', dest='log_hostname', default=None,
             help="Force this hostname for a log format that doesn't include it. All hits "
             "will seem to come to this host"
@@ -762,7 +766,7 @@ class Configuration(object):
             logging.debug('Accepted hostnames: all')
 
         if self.options.log_format_regex:
-            self.format = RegexFormat('custom', self.options.log_format_regex)
+            self.format = RegexFormat('custom', self.options.log_format_regex, self.options.log_date_format)
         elif self.options.log_format_name:
             try:
                 self.format = FORMATS[self.options.log_format_name]
