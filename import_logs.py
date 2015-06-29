@@ -1316,7 +1316,7 @@ class DynamicResolver(object):
     def _get_site_id_from_hit_host(self, hit):
         return piwik.call_api(
             'SitesManager.getSitesIdFromSiteUrl',
-            url=hit.host,
+            url='http://' + hit.host,
         )
 
     def _add_site(self, hit):
