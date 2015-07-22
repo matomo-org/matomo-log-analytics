@@ -1476,7 +1476,7 @@ class Recorder(object):
             try:
                 hits = self.queue.get()
             except:
-                logging.info("Queue does not exist anymore, exception details: " + sys.exc_info()[0])
+                # TODO: we should log something here, however when this happens, logging.etc will throw
                 return
 
             if len(hits) > 0:
