@@ -564,8 +564,8 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--log-hostname', dest='log_hostname', default=None,
-            help="Force this hostname for a log format that doesn't incldude it. All hits "
-            "will seem to came to this host"
+            help="Force this hostname for a log format that doesn't include it. All hits "
+            "will seem to come to this host"
         )
         option_parser.add_option(
             '--skip', dest='skip', default=0, type='int',
@@ -675,16 +675,18 @@ class Configuration(object):
             help="Track an attribute through a custom variable with visit scope instead of through Piwik's normal "
                  "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
                  "parameter, supply --regex-group-to-visit-cvar=\"userid=User Name\". This will track usernames in a "
-                 "custom variable named 'User Name'. See documentation for --log-format-regex for list of available "
-                 "regex groups."
+                 "custom variable named 'User Name'. The list of available regex groups can be found in the documentation "
+                 "for --log-format-regex (additional regex groups you may have defined "
+                 "in --log-format-regex can also be used)."
         )
         option_parser.add_option(
             '--regex-group-to-page-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_page_cvars_map'), type='string',
             help="Track an attribute through a custom variable with page scope instead of through Piwik's normal "
                  "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
                  "parameter, supply --regex-group-to-page-cvar=\"userid=User Name\". This will track usernames in a "
-                 "custom variable named 'User Name'. See documentation for --log-format-regex for list of available "
-                 "regex groups."
+                 "custom variable named 'User Name'. The list of available regex groups can be found in the documentation "
+                 "for --log-format-regex (additional regex groups you may have defined "
+                 "in --log-format-regex can also be used)."
         )
         option_parser.add_option(
             '--retry-max-attempts', dest='max_attempts', default=PIWIK_DEFAULT_MAX_ATTEMPTS, type='int',
