@@ -1658,7 +1658,7 @@ class Recorder(object):
             except Piwik.Error, e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
-                    fatal_error("Server returned status 400 (Bad Request).\nIs the BulkTracking plugin disabled?")
+                    fatal_error("Server returned status 400 (Bad Request).\nIs the BulkTracking plugin disabled?", hits[0].filename, hits[0].lineno)
 
                 raise
 
