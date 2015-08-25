@@ -39,6 +39,7 @@ import subprocess
 import functools
 import traceback
 import socket
+import textwrap
 
 try:
     import json
@@ -975,6 +976,9 @@ class Statistics(object):
         self.count_lines_parsed = self.Counter()
         self.count_lines_recorded = self.Counter()
 
+        # requests that the Piwik tracker considered invalid (or failed to track)
+        self.invalid_lines = []
+
         # Do not match the regexp.
         self.count_lines_invalid = self.Counter()
         # No site ID found by the resolver.
@@ -1031,8 +1035,19 @@ class Statistics(object):
             )
 
     def print_summary(self):
+        invalid_lines_summary = ''
+        if self.invalid_lines:
+            invalid_lines_summary = '''Invalid log lines
+-----------------
+
+The following lines were not tracked by Piwik, either due to a malformed tracker request or error in the tracker:
+
+%s
+
+''' % textwrap.fill(", ".join(self.invalid_lines), 80)
+
         print '''
-Logs import summary
+%(invalid_lines)sLogs import summary
 -------------------
 
     %(count_lines_recorded)d requests imported successfully
@@ -1120,7 +1135,8 @@ Processing your log data
             self.count_lines_recorded.value,
             self.time_start, self.time_stop,
         )),
-    'url': config.options.piwik_url
+    'url': config.options.piwik_url,
+    'invalid_lines': invalid_lines_summary
 }
 
     ##
@@ -1673,6 +1689,30 @@ class Recorder(object):
 
                 if config.options.debug_tracker:
                     logging.debug('tracker response:\n%s' % response)
+
+                # check for invalid requests
+                try:
+                    response = json.loads(response)
+                except:
+                    logging.info("bulk tracking returned invalid JSON")
+
+                    # don't display the tracker response if we're debugging the tracker.
+                    # debug tracker output will always break the normal JSON output.
+                    if not config.options.debug_tracker:
+                        logging.info("tracker response:\n%s" % response)
+                
+                if ('invalid_indices' in response and isinstance(response['invalid_indices'], list) and
+                    response['invalid_indices']):
+                    invalid_count = len(response['invalid_indices'])
+
+                    invalid_lines = [str(hits[index].lineno) for index in response['invalid_indices']]
+                    invalid_lines_str = ", ".join(invalid_lines)
+
+                    stats.invalid_lines.extend(invalid_lines)
+
+                    logging.info("The Piwik tracker identified %s invalid requests on lines: %s" % (invalid_count, invalid_lines_str))
+                elif 'invalid' in response and response['invalid'] > 0:
+                    logging.info("The Piwik tracker identified %s invalid requests." % response['invalid'])
             except Piwik.Error, e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
