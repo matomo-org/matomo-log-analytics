@@ -423,6 +423,13 @@ class Configuration(object):
             help="Enable debug output (specify multiple times for more verbose)",
         )
         option_parser.add_option(
+            '--debug-tracker', dest='debug_tracker', action='store_true', default=False,
+            help="Appends &debug=1 to tracker requests and prints out the result so the tracker can be debugged. If "
+            "using the log importer results in errors with the tracker or improperly recorded visits, this option can "
+            "be used to find out what the tracker is doing wrong. To see debug tracker output, you must also set the "
+            "[Tracker] debug_on_demand INI config to 1 in your Piwik's config.ini.php file."
+        )
+        option_parser.add_option(
             '--url', dest='piwik_url',
             help="REQUIRED Your Piwik server URL, eg. http://example.com/piwik/ or http://analytics.example.net",
         )
@@ -1170,6 +1177,9 @@ class Piwik(object):
         elif not isinstance(data, basestring) and headers['Content-type'] == 'application/json':
             data = json.dumps(data)
 
+            if args:
+                path = path + '?' + urllib.urlencode(args)
+
         headers['User-Agent'] = 'Piwik/LogImport'
 
         try:
@@ -1625,13 +1635,21 @@ class Recorder(object):
                 'requests': [self._get_hit_args(hit) for hit in hits]
             }
             try:
-                piwik.call(
-                    '/piwik.php', args={},
+                args = {}
+
+                if config.options.debug_tracker:
+                    args['debug'] = '1'
+
+                response = piwik.call(
+                    '/piwik.php', args=args,
                     expected_content=None,
                     headers={'Content-type': 'application/json'},
                     data=data,
                     on_failure=self._on_tracking_failure
                 )
+
+                if config.options.debug_tracker:
+                    logging.debug('tracker response:\n%s' % response)
             except Piwik.Error, e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
