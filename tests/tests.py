@@ -692,3 +692,28 @@ def test_w3c_custom_field_regex_option():
     assert match is not None
     assert format.get('substatus') == '654'
     assert format.get('win32_status') == '456'
+
+def test_custom_log_date_format_option():
+    """Test that --log-date-format will change how dates are parsed in a custom log format."""
+
+    file_ = 'logs/custom_regex_custom_date.log'
+
+    # have to override previous globals override for this test
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.options.w3c_field_regexes = None
+    import_logs.config.options.regex_group_to_visit_cvars_map = None
+    import_logs.config.options.regex_group_to_page_cvars_map = None
+    import_logs.config.options.log_format_regex = (
+        '(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<date>.*?)\]\s+'
+        '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
+    )
+    import_logs.config.options.log_date_format = '%B - %d, %Y:%H:%M:%S'
+    import_logs.config.format = import_logs.RegexFormat('custom', import_logs.config.options.log_format_regex,
+        import_logs.config.options.log_date_format)
+
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 16, 42, 7)

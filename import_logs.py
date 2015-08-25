@@ -563,6 +563,11 @@ class Configuration(object):
                  "Overrides --log-format-name." % (', '.join(available_regex_groups))
         )
         option_parser.add_option(
+            '--log-date-format', dest='log_date_format', default=None,
+            help="Format string used to parse dates. You can specify any format that can also be specified to "
+                 "the strptime python function."
+        )
+        option_parser.add_option(
             '--log-hostname', dest='log_hostname', default=None,
             help="Force this hostname for a log format that doesn't include it. All hits "
             "will seem to come to this host"
@@ -762,7 +767,7 @@ class Configuration(object):
             logging.debug('Accepted hostnames: all')
 
         if self.options.log_format_regex:
-            self.format = RegexFormat('custom', self.options.log_format_regex)
+            self.format = RegexFormat('custom', self.options.log_format_regex, self.options.log_date_format)
         elif self.options.log_format_name:
             try:
                 self.format = FORMATS[self.options.log_format_name]
@@ -2086,8 +2091,8 @@ class Parser(object):
             date_string = format.get('date')
             try:
                 hit.date = datetime.datetime.strptime(date_string, format.date_format)
-            except ValueError:
-                invalid_line(line, 'invalid date')
+            except ValueError, e:
+                invalid_line(line, 'invalid date or invalid format: %s' % str(e))
                 continue
 
             # Parse timezone and substract its value from the date
