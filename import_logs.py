@@ -423,6 +423,18 @@ class Configuration(object):
             help="Enable debug output (specify multiple times for more verbose)",
         )
         option_parser.add_option(
+            '--debug-tracker', dest='debug_tracker', action='store_true', default=False,
+            help="Appends &debug=1 to tracker requests and prints out the result so the tracker can be debugged. If "
+            "using the log importer results in errors with the tracker or improperly recorded visits, this option can "
+            "be used to find out what the tracker is doing wrong. To see debug tracker output, you must also set the "
+            "[Tracker] debug_on_demand INI config to 1 in your Piwik's config.ini.php file."
+        )
+        option_parser.add_option(
+            '--debug-request-limit', dest='debug_request_limit', type='int', default=None,
+            help="Debug option that will exit after N requests are parsed. Can be used w/ --debug-tracker to limit the "
+            "output of a large log file."
+        )
+        option_parser.add_option(
             '--url', dest='piwik_url',
             help="REQUIRED Your Piwik server URL, eg. http://example.com/piwik/ or http://analytics.example.net",
         )
@@ -1170,6 +1182,9 @@ class Piwik(object):
         elif not isinstance(data, basestring) and headers['Content-type'] == 'application/json':
             data = json.dumps(data)
 
+            if args:
+                path = path + '?' + urllib.urlencode(args)
+
         headers['User-Agent'] = 'Piwik/LogImport'
 
         try:
@@ -1625,13 +1640,21 @@ class Recorder(object):
                 'requests': [self._get_hit_args(hit) for hit in hits]
             }
             try:
-                piwik.call(
-                    '/piwik.php', args={},
+                args = {}
+
+                if config.options.debug_tracker:
+                    args['debug'] = '1'
+
+                response = piwik.call(
+                    '/piwik.php', args=args,
                     expected_content=None,
                     headers={'Content-type': 'application/json'},
                     data=data,
                     on_failure=self._on_tracking_failure
                 )
+
+                if config.options.debug_tracker:
+                    logging.debug('tracker response:\n%s' % response)
             except Piwik.Error, e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
@@ -1958,6 +1981,8 @@ class Parser(object):
             logging.info("--dump-log-regex option used, aborting log import.")
             os._exit(0)
 
+        valid_lines_count = 0
+
         hits = []
         for lineno, line in enumerate(file):
             try:
@@ -1974,6 +1999,13 @@ class Parser(object):
             if not match:
                 invalid_line(line, 'line did not match')
                 continue
+
+            valid_lines_count = valid_lines_count + 1
+            if config.options.debug_request_limit and valid_lines_count >= config.options.debug_request_limit:
+                if len(hits) > 0:
+                    Recorder.add_hits(hits)
+                logging.info("Exceeded limit specified in --debug-request-limit, exiting.")
+                return
 
             hit = Hit(
                 filename=filename,
