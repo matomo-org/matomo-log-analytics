@@ -148,6 +148,7 @@ class Options(object):
     regex_group_to_page_cvars_map = {}
     regex_groups_to_ignore = None
     replay_tracking_expected_tracker_file = 'piwik.php'
+    debug_request_limit = None
 
 class Config(object):
     """Mock configuration."""
