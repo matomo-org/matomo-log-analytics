@@ -639,6 +639,10 @@ class Configuration(object):
             help="By default Piwik tracks as Downloads the most popular file extensions. If you set this parameter (format: pdf,doc,...) then files with an extension found in the list will be imported as Downloads, other file extensions downloads will be skipped."
         )
         option_parser.add_option(
+            '--add-download-extensions', dest='extra_download_extensions', default=None,
+            help="Add extensions that should be treated as downloads. See --download-extensions for more info."
+        )
+        option_parser.add_option(
             '--w3c-map-field', action='callback', callback=functools.partial(self._set_option_map, 'custom_w3c_fields'), type='string',
             help="Map a custom log entry field in your W3C log to a default one. Use this option to load custom log "
                  "files that use the W3C extended log format such as those from the Advanced Logging W3C module. Used "
@@ -829,10 +833,13 @@ class Configuration(object):
         if self.options.recorders < 1:
             self.options.recorders = 1
 
+        download_extensions = DOWNLOAD_EXTENSIONS
         if self.options.download_extensions:
-            self.options.download_extensions = set(self.options.download_extensions.split(','))
-        else:
-            self.options.download_extensions = DOWNLOAD_EXTENSIONS
+            download_extensions = set(self.options.download_extensions.split(','))
+
+        if self.options.extra_download_extensions:
+            download_extensions.update(self.options.extra_download_extensions.split(','))
+        self.options.download_extensions = download_extensions
 
         if self.options.regex_groups_to_ignore:
             self.options.regex_groups_to_ignore = set(self.options.regex_groups_to_ignore.split(','))
