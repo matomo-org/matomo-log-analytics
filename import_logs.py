@@ -1568,8 +1568,9 @@ class Recorder(object):
         if hit.query_string and not config.options.strip_query_string:
             path += config.options.query_string_delimiter + hit.query_string
 
-        # only prepend main url if it's a path
-        url = (main_url if path.startswith('/') else '') + path[:1024]
+        # only prepend main url / host if it's a path
+        url_prefix = self._get_host_with_protocol(hit.host, main_url) if hasattr(hit, 'host') else main_url
+        url = (url_prefix if path.startswith('/') else '') + path[:1024]
 
         # handle custom variables before generating args dict
         if config.options.enable_bots:
@@ -1636,6 +1637,12 @@ class Recorder(object):
             args['_cvar'] = json.dumps(args['_cvar'])
 
         return args
+
+    def _get_host_with_protocol(self, host, main_url):
+        if '://' not in host:
+            parts = urlparse.urlparse(main_url)
+            host = parts.scheme + '://' + host
+        return host
 
     def _record_hits(self, hits):
         """
