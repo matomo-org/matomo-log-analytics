@@ -430,6 +430,11 @@ class Configuration(object):
             "[Tracker] debug_on_demand INI config to 1 in your Piwik's config.ini.php file."
         )
         option_parser.add_option(
+            '--debug-request-limit', dest='debug_request_limit', type='int', default=None,
+            help="Debug option that will exit after N requests are parsed. Can be used w/ --debug-tracker to limit the "
+            "output of a large log file."
+        )
+        option_parser.add_option(
             '--url', dest='piwik_url',
             help="REQUIRED Your Piwik server URL, eg. http://example.com/piwik/ or http://analytics.example.net",
         )
@@ -1976,6 +1981,8 @@ class Parser(object):
             logging.info("--dump-log-regex option used, aborting log import.")
             os._exit(0)
 
+        valid_lines_count = 0
+
         hits = []
         for lineno, line in enumerate(file):
             try:
@@ -1992,6 +1999,13 @@ class Parser(object):
             if not match:
                 invalid_line(line, 'line did not match')
                 continue
+
+            valid_lines_count = valid_lines_count + 1
+            if config.options.debug_request_limit and valid_lines_count >= config.options.debug_request_limit:
+                if len(hits) > 0:
+                    Recorder.add_hits(hits)
+                logging.info("Exceeded limit specified in --debug-request-limit, exiting.")
+                return
 
             hit = Hit(
                 filename=filename,
