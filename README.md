@@ -286,4 +286,3 @@ Use piwiklog %v vhost_common main " "
 
 ***This documentation is a community effort, feel free to suggest any change via Github Pull request.***
 
- 
