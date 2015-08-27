@@ -1700,6 +1700,8 @@ class Recorder(object):
                     # debug tracker output will always break the normal JSON output.
                     if not config.options.debug_tracker:
                         logging.info("tracker response:\n%s" % response)
+
+                    response = {}
                 
                 if ('invalid_indices' in response and isinstance(response['invalid_indices'], list) and
                     response['invalid_indices']):
