@@ -1599,6 +1599,10 @@ class Recorder(object):
 
         args.update(hit.args)
 
+        # option --idsite was used, we need to force using this siteId
+        if site_id and site_id != args['idsite']:
+            args['idsite'] = site_id
+
         if hit.is_download:
             args['download'] = args['url']
 
