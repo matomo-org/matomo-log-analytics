@@ -1596,7 +1596,11 @@ class Recorder(object):
         if config.options.replay_tracking:
             # prevent request to be force recorded when option replay-tracking
             args['rec'] = '0'
-
+            
+        # idsite is already determined by resolver
+        if 'idsite' in hit.args:
+            del hit.args['idsite']
+            
         args.update(hit.args)
 
         if hit.is_download:
