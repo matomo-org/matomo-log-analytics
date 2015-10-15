@@ -7,19 +7,42 @@ Import your server logs in Piwik with this powerful and easy to use tool.
 * Python 2.6 or 2.7. Python 3.x is not supported.
 * Piwik >= 2.14.0
 
-## Contributors
+Build status (master branch) [![Build Status](https://travis-ci.org/piwik/piwik-log-analytics.svg?branch=master)](https://travis-ci.org/piwik/piwik)
+
+## Supported log formats
+
+The script will import almost all standard web server log files, and many others. The following log formats are supported:
+ * all default log formats for: Nginx, Apache, IIS,
+ * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON,
+ * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs,
+ * streaming media server log files such as: Icecast,
+ * log files with and without the virtual host will be imported,
+ * in general, many fields are left optional to make the log importer very flexible.
+ 
+## Get involved
 
 We're looking for contributors! Feel free to submit Pull requests on Github.
 
 ### Submit a new log format
 
+The Log Analytics importer is designed to detect and import into Piwik as many log files as possible. Help us add your log formats!
+
+ * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
+ * Add a new test in [tests/tests.py](https://github.com/piwik/piwik-log-analytics/blob/master/tests/tests.py),
+ * Test that the logs are imported successfully as you expected,
+ * Open a Pull Request,
+ * Check the test you have added works (the build should be green),
+ * One Piwik team member will review and merge the Pull Request as soon as possible.
+
+We look forward to your contributions!
 
 ### Improve this guide
-This readme page could be improved and maybe you would like to help? 
 
-### Contribute code
+This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request. 
 
-if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik/labels/c%3A%20Log%20Analytics%20%28import_logs.py%29) which lists many interesting ideas and projects that need help.
+### Implement new features or fixes
+
+if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik-log-analytics/issues) which lists all issues and suggestions.
 
 ## How to use this script?
 
