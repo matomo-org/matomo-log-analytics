@@ -11,7 +11,15 @@ Import your server logs in Piwik with this powerful and easy to use tool.
 
 We're looking for contributors! Feel free to submit Pull requests on Github.
 
-For example this documentation page could be improved and maybe you would like to help? Or **maybe you know Python**, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik/labels/c%3A%20Log%20Analytics%20%28import_logs.py%29) which lists many interesting ideas and projects that need help. FYI [we plan to move](https://github.com/piwik/piwik/issues/7163) the project to its own repository on Github and split the big file into smaller files.
+### Submit a new log format
+
+
+### Improve this guide
+This readme page could be improved and maybe you would like to help? 
+
+### Contribute code
+
+if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik/labels/c%3A%20Log%20Analytics%20%28import_logs.py%29) which lists many interesting ideas and projects that need help.
 
 ## How to use this script?
 
