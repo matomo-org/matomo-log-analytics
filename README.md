@@ -11,13 +11,15 @@ Build status (master branch) [![Build Status](https://travis-ci.org/piwik/piwik-
 
 ## Supported log formats
 
-The script will import almost all standard web server log files, and many others. The following log formats are supported:
- * all default log formats for: Nginx, Apache, IIS,
- * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON,
- * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs,
- * streaming media server log files such as: Icecast,
- * log files with and without the virtual host will be imported,
- * in general, many fields are left optional to make the log importer very flexible.
+
+The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
+ * all default log formats for: Nginx, Apache, IIS
+ * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON
+ * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs
+ * streaming media server log files such as: Icecast
+ * log files with and without the virtual host will be imported
+
+In general, many fields are left optional to make the log importer very flexible.
  
 ## Get involved
 
