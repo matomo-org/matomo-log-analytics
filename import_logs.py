@@ -151,7 +151,7 @@ class JsonFormat(BaseFormat):
     def get(self, key):
         # Some ugly patchs ...
         if key == 'generation_time_milli':
-            self.json[key] =  int(self.json[key] * 1000)
+            self.json[key] =  int(float(self.json[key]) * 1000)
         # Patch date format ISO 8601
         elif key == 'date':
             tz = self.json[key][19:]
