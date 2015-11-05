@@ -482,7 +482,7 @@ def test_netscaler_parsing():
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == ''
     assert hits[0]['args'] == {}
-    assert hits[0]['generation_time_milli'] == 1000
+    assert hits[0]['generation_time_milli'] == "1000"
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/netscaler.log'
     assert hits[0]['is_redirect'] == True
