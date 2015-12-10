@@ -38,6 +38,23 @@ def add_multiple_spaces_to_file(path):
 
     return 'tmp.log'
 
+def use_ipv6_in_file(path):
+    file = open(path)
+    contents = file.read()
+    file.close()
+
+    if '1.2.3.4' not in contents:
+        raise RuntimeError('could not find ipv4 IP in ' + path +
+            ', make sure the IP 1.2.3.4 is used for tests')
+
+    contents = contents.replace('1.2.3.4', '0:0:0:0:0:ffff:7b2d:4359')
+
+    file = open('tmp.log', 'w')
+    file.write(contents)
+    file.close()
+
+    return 'tmp.log'
+
 def tearDownModule():
     if os.path.exists('tmp.log'):
         os.remove('tmp.log')
@@ -77,6 +94,23 @@ def test_format_detection():
         assert(format is not None)
         assert(format.name == format_name)
 
+    def _test_ipv6(format_name, log_file = None):
+        if log_file is None:
+            log_file = 'logs/%s.log' % format_name
+
+        tmp_path = use_ipv6_in_file(log_file)
+
+        # test correct format is detected first
+        file = open(tmp_path)
+        import_logs.config = Config()
+        format = import_logs.Parser.detect_format(file)
+        assert(format is not None)
+        assert(format.name == format_name)
+
+        # then parse the file and test the IP is parsed correctly
+        groups = parse_log_file_line(format_name, tmp_path)
+        assert groups['ip'] == '0:0:0:0:0:ffff:7b2d:4359'
+
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
         if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront':
@@ -92,6 +126,10 @@ def test_format_detection():
 
         f = functools.partial(_test_multiple_spaces, format_name)
         f.description = 'Testing autodetection of format ' + format_name + ' when multiple spaces separate fields'
+        yield f
+
+        f = functools.partial(_test_ipv6, format_name)
+        f.description = 'Testing parsing of IPv6 address with format ' + format_name
         yield f
 
     # add tests for amazon cloudfront (normal web + rtmp)
@@ -305,7 +343,7 @@ def check_iis_groups(groups):
     assert groups['date'] == '2012-04-01 00:00:13'
     assert groups['path'] == '/foo/bar'
     assert groups['query_string'] == 'topCat1=divinity&submit=Search'
-    assert groups['ip'] == '5.6.7.8'
+    assert groups['ip'] == '1.2.3.4'
     assert groups['referrer'] == '-'
     assert groups['user_agent'] == 'Mozilla/5.0+(X11;+U;+Linux+i686;+en-US;+rv:1.9.2.7)+Gecko/20100722+Firefox/3.6.7'
     assert groups['status'] == '200'
@@ -333,7 +371,7 @@ def check_s3_groups(groups):
 def check_nginx_json_groups(groups):
     assert groups['host'] == 'www.piwik.org'
     assert groups['status'] == '200'
-    assert groups['ip'] == '203.38.78.246'
+    assert groups['ip'] == '1.2.3.4'
     assert groups['length'] == 192
     assert groups['user_agent'] == 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17'
     assert groups['date'] == '2013-10-10T16:52:00+02:00'
