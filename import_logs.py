@@ -2044,7 +2044,12 @@ class Parser(object):
         valid_lines_count = 0
 
         hits = []
-        for lineno, line in enumerate(file):
+        lineno = 0
+        while True:
+            line = sys.stdin.readline()
+            if not line: break
+            lineno = lineno + 1
+
             try:
                 line = line.decode(config.options.encoding)
             except UnicodeDecodeError:
