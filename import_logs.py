@@ -142,6 +142,11 @@ class JsonFormat(BaseFormat):
 
     def match(self, line):
         try:
+            # nginx outputs malformed JSON w/ hex escapes when confronted w/ non-UTF input. we have to
+            # workaround this by converting hex escapes in strings to unicode escapes. the conversion is naive,
+            # so it does not take into account the string's actual encoding (which we don't have access to).
+            line = line.replace('\\x', '\\u00')
+
             self.json = json.loads(line)
             return self
         except:
