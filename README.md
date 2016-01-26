@@ -86,6 +86,31 @@ You can then import your logs automatically each day (at 0:01). Setup a cron job
 
     0 1 * * * /path/to/piwik/misc/log-analytics/import-logs.py -u piwik.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
 
+## Using Basic access authentication
+
+If you protect your site with Basic access authentication then you can pass the credentials via your
+cron job.
+
+Apache configuration:
+```
+<Location /piwik>
+    AuthType basic
+    AuthName "Site requires authentication"
+    # Where all the external login/passwords are
+    AuthUserFile /etc/apache2/somefile
+    Require valid-user
+</Location>
+```
+
+cron job:
+```
+5 0 * * * /var/www/html/piwik/misc/log-analytics/import_logs.py --url https://www.mysite.com/piwik --auth-user=someuser --auth-password=somepassword --exclude-path=/piwik/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+```
+
+Security tips:
+* Currently the credentials are not encrypted in the cron job. This should be a future enhancement.
+* Always use HTTPS with Basic access authentication to ensure you are not passing credentials clear text.
+
 ## Performance
 
 With an Intel Core i5-2400 @ 3.10GHz (2 cores, 4 virtual cores with Hyper-threading),
