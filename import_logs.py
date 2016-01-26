@@ -424,6 +424,16 @@ class Configuration(object):
                    "              Please send your suggestions or successful user story to hello@piwik.org "
         )
 
+        # Basic auth user
+        option_parser.add_option(
+            '--auth-user', dest='auth_user',
+            help="Basic auth user",
+        )
+        # Basic auth password
+        option_parser.add_option(
+            '--auth-password', dest='auth_password',
+            help="Basic auth password",
+        )
         option_parser.add_option(
             '--debug', '-d', dest='debug', action='count', default=0,
             help="Enable debug output (specify multiple times for more verbose)",
@@ -1221,6 +1231,10 @@ class Piwik(object):
             timeout = None # the config global object may not be created at this point
 
         request = urllib2.Request(url + path, data, headers)
+        # Handle basic auth if auth_user set
+        if config.options.auth_user is not None:
+            base64string = base64.encodestring('%s:%s' % (config.options.auth_user, config.options.auth_password)).replace('\n', '')
+            request.add_header("Authorization", "Basic %s" % base64string)        
         opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
         response = opener.open(request, timeout = timeout)
         result = response.read()
