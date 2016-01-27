@@ -1231,10 +1231,19 @@ class Piwik(object):
             timeout = None # the config global object may not be created at this point
 
         request = urllib2.Request(url + path, data, headers)
+
         # Handle basic auth if auth_user set
-        if config.options.auth_user is not None:
-            base64string = base64.encodestring('%s:%s' % (config.options.auth_user, config.options.auth_password)).replace('\n', '')
+        try:
+            auth_user = config.options.auth_user
+            auth_password = config.options.auth_password
+        except:
+            auth_user = None
+            auth_password = None
+
+        if auth_user is not None:
+            base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
             request.add_header("Authorization", "Basic %s" % base64string)        
+
         opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
         response = opener.open(request, timeout = timeout)
         result = response.read()
