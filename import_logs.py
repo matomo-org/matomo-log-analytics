@@ -367,7 +367,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
 
 _HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
 _COMMON_LOG_FORMAT = (
-    '(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
+    '(?P<ip>\S+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
     '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
 )
 _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +

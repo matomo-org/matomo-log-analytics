@@ -322,6 +322,7 @@ def check_common_groups(groups):
     assert groups['path'] == '/'
     assert groups['status'] == '301'
     assert groups['length'] == '368'
+    assert groups['userid'] == 'theuser'
 
 def check_ncsa_extended_groups(groups):
     check_common_groups(groups)
