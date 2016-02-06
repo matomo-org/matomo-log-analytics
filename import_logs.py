@@ -216,12 +216,12 @@ class W3cExtendedFormat(RegexFormat):
     FIELDS_LINE_PREFIX = '#Fields: '
 
     fields = {
-        'date': '(?P<date>^\d+[-\d+]+',
+        'date': '(?P<date>\d+[-\d+]+',
         'time': '[\d+:]+)[.\d]*?', # TODO should not assume date & time will be together not sure how to fix ATM.
         'cs-uri-stem': '(?P<path>/\S*)',
         'cs-uri-query': '(?P<query_string>\S*)',
         'c-ip': '"?(?P<ip>[\w*.:-]*)"?',
-        'cs(User-Agent)': '(?P<user_agent>".*?"|\S+)',
+        'cs(User-Agent)': '(?P<user_agent>".*?"|\S*)',
         'cs(Referer)': '(?P<referrer>\S+)',
         'sc-status': '(?P<status>\d+)',
         'sc-bytes': '(?P<length>\S+)',
@@ -333,6 +333,19 @@ class IisFormat(W3cExtendedFormat):
 
         self.name = 'iis'
 
+class ShoutcastFormat(W3cExtendedFormat):
+
+    fields = W3cExtendedFormat.fields.copy()
+    fields.update({
+        'c-status': '(?P<status>\d+)',
+        'x-duration': '(?P<generation_time_secs>[.\d]+)'
+    })
+
+    def __init__(self):
+        super(ShoutcastFormat, self).__init__()
+
+        self.name = 'shoutcast'
+
 class AmazonCloudFrontFormat(W3cExtendedFormat):
 
     fields = W3cExtendedFormat.fields.copy()
@@ -390,6 +403,7 @@ FORMATS = {
     'w3c_extended': W3cExtendedFormat(),
     'amazon_cloudfront': AmazonCloudFrontFormat(),
     'iis': IisFormat(),
+    'shoutcast': ShoutcastFormat(),
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'nginx_json': JsonFormat('nginx_json'),
