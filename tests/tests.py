@@ -401,7 +401,7 @@ def test_format_parsing():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by IIS and netscaler logs; amazon cloudfront tested individually
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast':
             continue
 
         f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
@@ -533,6 +533,45 @@ def test_netscaler_parsing():
     assert hits[0]['is_robot'] == False
     assert hits[0]['full_path'] == u'/Citrix/XenApp/Wan/auth/login.jsp'
     assert hits[0]['user_agent'] == u'Mozilla/4.0+(compatible;+MSIE+7.0;+Windows+NT+5.1;+Trident/4.0;+.NET+CLR+1.1.4322;+.NET+CLR+2.0.50727;+.NET+CLR+3.0.04506.648;+.NET+CLR+3.5.21022)'
+
+def test_shoutcast_parsing():
+    """test parsing of shoutcast logs (which use extended W3C log format)"""
+
+    file_ = 'logs/shoutcast.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == u'/stream'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['args'] == {}
+    assert hits[0]['generation_time_milli'] == 1000.0
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/shoutcast.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2015, 12, 7, 10, 37, 5)
+    assert hits[0]['lineno'] == 3
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[0]['query_string'] == u'title=UKR%20Nights'
+    assert hits[0]['path'] == u'/stream'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/stream?title=UKR%20Nights'
+    assert hits[0]['user_agent'] == u'NSPlayer/10.0.0.3702 WMFSDK/10.0'
+    assert hits[0]['length'] == 65580
 
 def test_amazon_cloudfront_web_parsing():
     """test parsing of amazon cloudfront logs (which use extended W3C log format)"""

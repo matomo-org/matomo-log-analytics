@@ -346,6 +346,13 @@ class ShoutcastFormat(W3cExtendedFormat):
 
         self.name = 'shoutcast'
 
+    def get(self, key):
+        if key == 'user_agent':
+            user_agent = super(ShoutcastFormat, self).get(key)
+            return urllib2.unquote(user_agent)
+        else:
+            return super(ShoutcastFormat, self).get(key)
+
 class AmazonCloudFrontFormat(W3cExtendedFormat):
 
     fields = W3cExtendedFormat.fields.copy()
