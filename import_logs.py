@@ -366,7 +366,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         'x-edge-location': '(?P<x_edge_location>".*?"|\S+)',
         'x-edge-result-type': '(?P<x_edge_result_type>".*?"|\S+)',
         'x-edge-request-id': '(?P<x_edge_request_id>".*?"|\S+)',
-        'x-host-header': '(?P<x_host_header>".*?"|\S+)'
+        'x-host-header': '(?P<host>".*?"|\S+)'
     })
 
     def __init__(self):
