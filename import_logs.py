@@ -1281,6 +1281,7 @@ class Piwik(object):
             'module' : 'API',
             'format' : 'json2',
             'method' : method,
+            'filter_limit' : '-1',
         }
         # token_auth, by default, is taken from config.
         token_auth = kwargs.pop('_token_auth', None)
