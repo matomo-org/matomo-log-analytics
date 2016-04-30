@@ -1409,7 +1409,13 @@ class DynamicResolver(object):
             self._cache['sites'] = piwik.call_api('SitesManager.getAllSites')
 
     def _get_site_id_from_hit_host(self, hit):
+<<<<<<< HEAD
 
+=======
+        # Workaround for empty Host bug issue #126
+        if hit.host.strip() == '':
+            hit.host = 'nohost'
+>>>>>>> cd68af6d7347d7e4fcf190a2291a58ebb2d84cbd
             return piwik.call_api(
                 'SitesManager.getSitesIdFromSiteUrl',
                 url=hit.host,
