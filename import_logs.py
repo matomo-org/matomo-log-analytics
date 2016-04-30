@@ -1281,6 +1281,7 @@ class Piwik(object):
             'module' : 'API',
             'format' : 'json2',
             'method' : method,
+            'filter_limit' : '-1',
         }
         # token_auth, by default, is taken from config.
         token_auth = kwargs.pop('_token_auth', None)
@@ -1408,10 +1409,11 @@ class DynamicResolver(object):
             self._cache['sites'] = piwik.call_api('SitesManager.getAllSites')
 
     def _get_site_id_from_hit_host(self, hit):
-        return piwik.call_api(
-            'SitesManager.getSitesIdFromSiteUrl',
-            url=hit.host,
-        )
+
+            return piwik.call_api(
+                'SitesManager.getSitesIdFromSiteUrl',
+                url=hit.host,
+            )
 
     def _add_site(self, hit):
         main_url = 'http://' + hit.host
@@ -1501,6 +1503,10 @@ class DynamicResolver(object):
             # We only consider requests with piwik.php which don't need host to be imported
             return self._resolve_when_replay_tracking(hit)
         else:
+            # Workaround for empty Host bug issue #126
+            if hit.host.strip() == '':
+                hit.host = 'nohost'
+
             return self._resolve_by_host(hit)
 
     def check_format(self, format):
