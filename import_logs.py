@@ -1502,6 +1502,9 @@ class DynamicResolver(object):
             # We only consider requests with piwik.php which don't need host to be imported
             return self._resolve_when_replay_tracking(hit)
         else:
+            # Workaround for empty Host bug issue #126
+            if hit.host.strip() == '':
+                hit.host = 'nohost'
             return self._resolve_by_host(hit)
 
     def check_format(self, format):
