@@ -1409,10 +1409,13 @@ class DynamicResolver(object):
             self._cache['sites'] = piwik.call_api('SitesManager.getAllSites')
 
     def _get_site_id_from_hit_host(self, hit):
-        return piwik.call_api(
-            'SitesManager.getSitesIdFromSiteUrl',
-            url=hit.host,
-        )
+        # Workaround for empty Host bug issue #126
+        if hit.host.strip() == '':
+            hit.host = 'nohost'
+            return piwik.call_api(
+                'SitesManager.getSitesIdFromSiteUrl',
+                url=hit.host,
+            )
 
     def _add_site(self, hit):
         main_url = 'http://' + hit.host
