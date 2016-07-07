@@ -240,7 +240,7 @@ Since apache CustomLog directives can send log data to a script, it is possible 
 This approach has many advantages, including real-time data being available on your piwik site, using real logs files instead of relying on client-side Javacsript, and not having a surge of CPU/RAM usage during log processing.
 The disadvantage is that if Piwik is unavailable, logging data will be lost. Therefore we recommend to also log into a standard log file. Bear in mind also that apache processes will wait until a request is logged before processing a new request, so if piwik runs slow so does your site: it's therefore important to tune `--recorders` to the right level.
 
-##### Basic setup
+##### Basic setup example 
 
 You might have in your main config section:
 
@@ -253,16 +253,28 @@ CustomLog /path/to/logfile myLogFormat
 CustomLog "|/path/to/import_logs.py --option1 --option2 ... -" myLogFormat
 ```
 
-Note: on Debian/Ubuntu, the default configuration defines the `vhost_combined` format. You can use it instead of defining `myLogFormat`.
+Note: on Debian/Ubuntu, the default configuration defines the `vhost_combined` format. You can use it instead of defining `myLogFormat`. 
+
+Here is another example on Apache defining the custom log:
+```
+LogFormat "%v %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" piwikLogFormat
+
+CustomLog "||/var/www/virtual/test.tld/piwik/htdocs/misc/log-analytics/import_logs.py \
+--debug --enable-http-errors --enable-http-redirects --enable-bots \
+--url=http://piwik.test.tld --output=/var/log/piwik.log --recorders=1 \
+--recorder-max-payload-size=1 --log-format-name=common_complete \
+-" piwikLogFormat
+```
 
 Useful options here are:
 
 * `--add-sites-new-hosts` (creates new websites in piwik based on %v in the LogFormat)
 * `--output=/path/to/piwik.log` (puts any output into a log file for reference/debugging later)
 * `--recorders=4` (use whatever value seems sensible for you - higher traffic sites will need more recorders to keep up)
-* "-" so it reads straight from /dev/stdin
+* `-` so it reads straight from /dev/stdin
 
 You can have as many CustomLog statements as you like. However, if you define any CustomLog directives within a <VirtualHost> block, all CustomLogs in the main config will be overridden. Therefore if you require custom logging for particular VirtualHosts, it is recommended to use mod_macro to make configuration more maintainable.
+
 
 ##### Advanced setup: Apache vhost, custom logs, automatic website creation
 
@@ -344,5 +356,5 @@ Use piwiklog %v vhost_common main " "
 ### And that's all !
 
 
-***This documentation is a community effort, feel free to suggest any change via Github Pull request.***
+***This documentation is a community effort, we welcome your pull requests to [improve this documentation](https://github.com/piwik/piwik-log-analytics/edit/master/README.md).***
 
