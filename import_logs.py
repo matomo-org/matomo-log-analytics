@@ -537,7 +537,9 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--token-auth', dest='piwik_token_auth',
-            help="Piwik Super User token_auth, 32 characters hexadecimal string, found in Piwik > API",
+            help="Piwik user token_auth, the token_auth is found in Piwik > Settings > API. "
+                 "You must use a token_auth that has at least 'admin' or 'super user' permission. "
+                 "If you use a token_auth for a non admin user, your users' IP addresses will not be tracked properly. "
         )
 
         option_parser.add_option(

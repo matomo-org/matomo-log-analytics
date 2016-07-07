@@ -62,6 +62,7 @@ If you wish to track all requests the following command would be used:
 
     python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log 
 
+
 ### Format Specific Details
 
 * If you are importing Netscaler log files, make sure to specify the `--iis-time-taken-secs` option. Netscaler stores
@@ -213,7 +214,7 @@ Just needed to configure the best params for import_logs.py :
 #!/bin/sh
 
 exec python /path/to/misc/log-analytics/import_logs.py \
- --url=http://localhost/ --token-auth=<your_auth_token> \
+ --url=http://localhost/ \
  --idsite=1 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
  --log-format-name=nginx_json -
 ```
