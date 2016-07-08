@@ -121,7 +121,11 @@ class BaseFormat(object):
 
     def check_format(self, file):
         line = file.readline()
-        file.seek(0)
+        try:
+            file.seek(0)
+        except IOError:
+            pass
+
         return self.check_format_line(line)
 
     def check_format_line(self, line):
@@ -238,12 +242,20 @@ class W3cExtendedFormat(RegexFormat):
 
         # if we couldn't create a regex, this file does not follow the W3C extended log file format
         if not self.regex:
-            file.seek(0)
+            try:
+                file.seek(0)
+            except IOError:
+                pass
+
             return
 
         first_line = file.readline()
 
-        file.seek(0)
+        try:
+            file.seek(0)
+        except IOError:
+            pass
+
         return self.check_format_line(first_line)
 
     def create_regex(self, file):
