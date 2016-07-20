@@ -842,14 +842,14 @@ class Configuration(object):
 
         if not (self.options.piwik_url.startswith('http://') or self.options.piwik_url.startswith('https://')):
             self.options.piwik_url = 'http://' + self.options.piwik_url
-        logging.debug('Piwik tracker URL is: %s', self.options.piwik_url)
+        logging.debug('Piwik Tracker API URL is: %s', self.options.piwik_url)
 
         if not self.options.piwik_api_url:
             self.options.piwik_api_url = self.options.piwik_url
 
         if not (self.options.piwik_api_url.startswith('http://') or self.options.piwik_api_url.startswith('https://')):
             self.options.piwik_api_url = 'http://' + self.options.piwik_api_url
-        logging.debug('Piwik API URL is: %s', self.options.piwik_api_url)
+        logging.debug('Piwik Analytics API URL is: %s', self.options.piwik_api_url)
 
         if not self.options.piwik_token_auth:
             try:
@@ -892,7 +892,7 @@ class Configuration(object):
                     userLogin=piwik_login,
                     md5Password=piwik_password,
                     _token_auth='',
-                    _url=self.options.piwik_url,
+                    _url=self.options.piwik_api_url,
                 )
             except urllib2.URLError, e:
                 fatal_error('error when fetching token_auth from the API: %s' % e)
