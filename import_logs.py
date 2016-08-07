@@ -1244,6 +1244,21 @@ class Piwik(object):
 
             return urllib2.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, hdrs, newurl)
 
+    class HTTPSHandlerWithoutValidation(urllib2.HTTPSHandler):
+        """
+        An HTTPS handler that does not validate its certificate, needed
+        when using self-signed certificates.
+        """
+
+        def __init__(self):
+            import ssl
+
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            urllib2.HTTPSHandler.__init__(self, context = context)
+
     @staticmethod
     def _call(path, args, headers=None, url=None, data=None):
         """
@@ -1285,7 +1300,11 @@ class Piwik(object):
             base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
             request.add_header("Authorization", "Basic %s" % base64string)        
 
-        opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
+        if urlparse.urlparse(url).scheme == 'https':
+            opener = urllib2.build_opener(Piwik.HTTPSHandlerWithoutValidation())
+        else:
+            opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
+
         response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
