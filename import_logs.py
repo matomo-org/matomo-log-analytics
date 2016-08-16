@@ -58,14 +58,14 @@ except ImportError:
 ##
 
 STATIC_EXTENSIONS = set((
-    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff class swf css js xml robots.txt webp'
+    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml robots.txt webp'
 ).split())
 
 DOWNLOAD_EXTENSIONS = set((
-    '7z aac arc arj asf asx avi bin csv deb dmg doc docx exe flv gz gzip hqx '
-    'ibooks jar mpg mp2 mp3 mp4 mpeg mov movie msi msp odb odf odg odp '
-    'ods odt ogg ogv pdf phps ppt pptx qt qtm ra ram rar rpm sea sit tar tbz '
-    'bz2 tbz tgz torrent txt wav wma wmv wpd xls xlsx xml xsd z zip '
+    '7z aac arc arj asf asx avi bin csv deb dmg doc docx exe flac flv gz gzip hqx '
+    'ibooks jar json mpg mp2 mp3 mp4 mpeg mov movie msi msp odb odf odg odp '
+    'ods odt ogg ogv pdf phps ppt pptx qt qtm ra ram rar rpm rtf sea sit tar tbz '
+    'bz2 tbz tgz torrent txt wav webm wma wmv wpd xls xlsx xml xsd z zip '
     'azw3 epub mobi apk'
 ).split())
 
