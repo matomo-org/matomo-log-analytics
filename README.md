@@ -161,7 +161,7 @@ Note: the group `<generation_time_milli>` is also available if your server logs 
 
 ### How do I setup Nginx to directly imports in Piwik via syslog?
 
-With the syslog patch from http://wiki.nginx.org/3rdPartyModules which is compiled in dotdeb's release, you can log to syslog and imports them live to Piwik.
+Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Piwik.
 
 Path: Nginx -> syslog -> (syslog central server) -> this script -> piwik
 
