@@ -494,6 +494,11 @@ class Configuration(object):
             help="REQUIRED Your Piwik server URL, eg. http://example.com/piwik/ or http://analytics.example.net",
         )
         option_parser.add_option(
+            '--api-url', dest='piwik_api_url',
+            help="This URL will be used to send API requests (use it if your tracker URL differs from UI/API url), "
+            "eg. http://other-example.com/piwik/ or http://analytics-api.example.net",
+        )
+        option_parser.add_option(
             '--dry-run', dest='dry_run',
             action='store_true', default=False,
             help="Perform a trial run with no tracking data being inserted into Piwik",
@@ -878,7 +883,14 @@ class Configuration(object):
 
         if not (self.options.piwik_url.startswith('http://') or self.options.piwik_url.startswith('https://')):
             self.options.piwik_url = 'http://' + self.options.piwik_url
-        logging.debug('Piwik URL is: %s', self.options.piwik_url)
+        logging.debug('Piwik Tracker API URL is: %s', self.options.piwik_url)
+
+        if not self.options.piwik_api_url:
+            self.options.piwik_api_url = self.options.piwik_url
+
+        if not (self.options.piwik_api_url.startswith('http://') or self.options.piwik_api_url.startswith('https://')):
+            self.options.piwik_api_url = 'http://' + self.options.piwik_api_url
+        logging.debug('Piwik Analytics API URL is: %s', self.options.piwik_api_url)
 
         if not self.options.piwik_token_auth:
             try:
@@ -921,7 +933,7 @@ class Configuration(object):
                     userLogin=piwik_login,
                     md5Password=piwik_password,
                     _token_auth='',
-                    _url=self.options.piwik_url,
+                    _url=self.options.piwik_api_url,
                 )
             except urllib2.URLError, e:
                 fatal_error('error when fetching token_auth from the API: %s' % e)
@@ -1191,7 +1203,7 @@ Processing your log data
             self.count_lines_recorded.value,
             self.time_start, self.time_stop,
         )),
-    'url': config.options.piwik_url,
+    'url': config.options.piwik_api_url,
     'invalid_lines': invalid_lines_summary
 }
 
@@ -1311,6 +1323,9 @@ class Piwik(object):
             args['token_auth'] = token_auth
 
         url = kwargs.pop('_url', None)
+        if url is None:
+            url = config.options.piwik_api_url
+
 
         if kwargs:
             args.update(kwargs)
