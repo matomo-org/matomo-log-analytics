@@ -135,7 +135,7 @@ To improve performance,
 
 ### Example Nginx Virtual Host Log Format
 
-nginx's default access log is parsed with the `--log-format-name=common_complete` option.
+nginx's default access log is parsed with the `--log-format-name=ncsa_extended` option.
 
 To log multiple virtual hosts in nginx's access log, use the following configuration:
 
@@ -144,7 +144,7 @@ log_format vhosts '$host $remote_addr - $remote_user [$time_local] "$request" $s
 access_log /PATH/TO/access.log vhosts;
 ```
 
-When executing `import_logs.py`, use `--log-format-name=common_complete`.
+When executing `import_logs.py`, use `--log-format-name=ncsa_extended`.
 
 ### How do I import Page Speed Metric from logs?
 
