@@ -597,6 +597,10 @@ class Configuration(object):
             help="Track bots. All bot visits will have a Custom Variable set with name='Bot' and value='$Bot_user_agent_here$'"
         )
         option_parser.add_option(
+            '--custom-bot', dest='custom_bots', action='append', default=[],
+            help="Define user agents (or parts thereof) to be treated as Bots. Requires --enable-bots to be active. Can be specified multiple times"
+        )
+        option_parser.add_option(
             '--enable-http-errors', dest='enable_http_errors',
             action='store_true', default=False,
             help="Track HTTP errors (status code 4xx or 5xx)"
@@ -1932,7 +1936,7 @@ class Parser(object):
 
     def check_user_agent(self, hit):
         user_agent = hit.user_agent.lower()
-        for s in itertools.chain(EXCLUDED_USER_AGENTS, config.options.excluded_useragents):
+        for s in itertools.chain(EXCLUDED_USER_AGENTS + tuple(config.options.custom_bots), config.options.excluded_useragents):
             if s in user_agent:
                 if config.options.enable_bots:
                     hit.is_robot = True
