@@ -188,7 +188,9 @@ log_format  piwik                   '{"ip": "$remote_addr",'
 ...
 	server {
 	...
-	access_log syslog:info piwik;
+	access_log syslog:server=127.0.0.1,severity=info piwik;
+	# to leave logs written in old format as well, uncomment following line
+	# access_log /var/log/nginx/access.log main;
 	...
 	}
 }
