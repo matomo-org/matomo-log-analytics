@@ -989,6 +989,9 @@ class Configuration(object):
             command.append('--piwik-domain=' + hostname )
 
             command = subprocess.list2cmdline(command)
+
+#            logging.debug(command);
+
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             [stdout, stderr] = process.communicate()
             if process.returncode != 0:
@@ -1342,7 +1345,14 @@ class Piwik(object):
                     final_args.append(('%s[%d]' % (key, index), obj))
             else:
                 final_args.append((key, value))
+
+
+#        logging.debug('%s' % final_args)
+#        logging.debug('%s' % url)
+
         res = Piwik._call('/', final_args, url=url)
+
+
         try:
             return json.loads(res)
         except ValueError:
