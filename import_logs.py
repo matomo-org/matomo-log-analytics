@@ -1315,7 +1315,7 @@ class Piwik(object):
         """
         args = {
             'module' : 'API',
-            'format' : 'json',
+            'format' : 'json2',
             'method' : method,
             'filter_limit' : '-1',
         }
