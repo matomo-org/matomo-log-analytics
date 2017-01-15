@@ -97,7 +97,7 @@ EXCLUDED_USER_AGENTS = (
     'voilabot',
     'yahoo',
     'yandex',
-    'Pingdom.com_bot_',
+    'pingdom.com_bot_',
 )
 
 PIWIK_DEFAULT_MAX_ATTEMPTS = 3
