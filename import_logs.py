@@ -70,6 +70,7 @@ DOWNLOAD_EXTENSIONS = set((
 ).split())
 
 # A good source is: http://phpbb-bots.blogspot.com/
+# user agents must be lowercase
 EXCLUDED_USER_AGENTS = (
     'adsbot-google',
     'ask jeeves',
@@ -90,6 +91,7 @@ EXCLUDED_USER_AGENTS = (
     'msnbot',
     'netcraftsurvey',
     'panopta',
+    'pingdom.com_bot_',
     'robot',
     'spider',
     'surveybot',
@@ -97,7 +99,6 @@ EXCLUDED_USER_AGENTS = (
     'voilabot',
     'yahoo',
     'yandex',
-    'pingdom.com_bot_',
 )
 
 PIWIK_DEFAULT_MAX_ATTEMPTS = 3
