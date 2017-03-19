@@ -144,7 +144,7 @@ log_format vhosts '$host $remote_addr - $remote_user [$time_local] "$request" $s
 access_log /PATH/TO/access.log vhosts;
 ```
 
-When executing `import_logs.py`, use `--log-format-name=ncsa_extended`.
+When executing `import_logs.py`, use `--log-format-name=common_complete`.
 
 ### How do I import Page Speed Metric from logs?
 
@@ -163,7 +163,7 @@ Apache LogFormat "%h %l %u %t \"%r\" %>s %b %D"
 
 Note: the group `<generation_time_milli>` is also available if your server logs generation time in milliseconds rather than microseconds.
 
-### How do I setup Nginx to directly imports in Piwik via syslog?
+### How do I setup Nginx to directly import to Piwik via syslog?
 
 Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Piwik.
 
