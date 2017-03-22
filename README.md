@@ -20,7 +20,7 @@ The script will import all standard web server log files, and some files with no
  * log files with and without the virtual host will be imported
 
 In general, many fields are left optional to make the log importer very flexible.
- 
+
 ## Get involved
 
 We're looking for contributors! Feel free to submit Pull requests on Github.
@@ -40,7 +40,7 @@ We look forward to your contributions!
 
 ### Improve this guide
 
-This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request. 
+This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request.
 
 ### Implement new features or fixes
 
@@ -60,7 +60,7 @@ and will not track bots, static files, or error requests.
 
 If you wish to track all requests the following command would be used:
 
-    python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log 
+    python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log
 
 
 ### Format Specific Details
@@ -144,7 +144,7 @@ log_format vhosts '$host $remote_addr - $remote_user [$time_local] "$request" $s
 access_log /PATH/TO/access.log vhosts;
 ```
 
-When executing `import_logs.py`, use `--log-format-name=ncsa_extended`.
+When executing `import_logs.py`, use `--log-format-name=common_complete`.
 
 ### How do I import Page Speed Metric from logs?
 
@@ -163,7 +163,7 @@ Apache LogFormat "%h %l %u %t \"%r\" %>s %b %D"
 
 Note: the group `<generation_time_milli>` is also available if your server logs generation time in milliseconds rather than microseconds.
 
-### How do I setup Nginx to directly imports in Piwik via syslog?
+### How do I setup Nginx to directly import to Piwik via syslog?
 
 Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Piwik.
 
@@ -245,7 +245,7 @@ Since apache CustomLog directives can send log data to a script, it is possible 
 This approach has many advantages, including real-time data being available on your piwik site, using real logs files instead of relying on client-side Javacsript, and not having a surge of CPU/RAM usage during log processing.
 The disadvantage is that if Piwik is unavailable, logging data will be lost. Therefore we recommend to also log into a standard log file. Bear in mind also that apache processes will wait until a request is logged before processing a new request, so if piwik runs slow so does your site: it's therefore important to tune `--recorders` to the right level.
 
-##### Basic setup example 
+##### Basic setup example
 
 You might have in your main config section:
 
@@ -258,7 +258,7 @@ CustomLog /path/to/logfile myLogFormat
 CustomLog "|/path/to/import_logs.py --option1 --option2 ... -" myLogFormat
 ```
 
-Note: on Debian/Ubuntu, the default configuration defines the `vhost_combined` format. You can use it instead of defining `myLogFormat`. 
+Note: on Debian/Ubuntu, the default configuration defines the `vhost_combined` format. You can use it instead of defining `myLogFormat`.
 
 Here is another example on Apache defining the custom log:
 ```
@@ -362,4 +362,3 @@ Use piwiklog %v vhost_common main " "
 
 
 ***This documentation is a community effort, we welcome your pull requests to [improve this documentation](https://github.com/piwik/piwik-log-analytics/edit/master/README.md).***
-
