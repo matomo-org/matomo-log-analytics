@@ -167,7 +167,9 @@ Note: the group `<generation_time_milli>` is also available if your server logs 
 
 Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Piwik.
 
-Path: Nginx -> syslog -> (syslog central server) -> this script -> piwik
+Path: nginx -> syslog -> (syslog central server) -> import_logs.py -> piwik
+
+As a syslog central server you could use rsyslog or syslog-ng, use relevant parts of documentation below. Rsyslog part is tested with Ubuntu 16.10 and is working out-of-the-box.
 
 You can use any log format that this script can handle, like Apache Combined, and Json format which needs less processing.
 
@@ -188,7 +190,10 @@ log_format  piwik                   '{"ip": "$remote_addr",'
 ...
 	server {
 	...
-	access_log syslog:info piwik;
+	# for syslog-ng
+	access_log syslog:server=127.0.0.1,severity=info piwik;
+	# for rsyslog
+	access_log syslog:server=unix:/var/cache/nginx/access.socket,facility=local0 piwik;
 	...
 	}
 }
@@ -211,14 +216,14 @@ destination d_piwik {
 log { source(s_nginx); filter(f_info); destination(d_piwik); };
 ```
 
-##### piwik.sh
+###### piwik.sh, syslog-ng version
 
-Just needed to configure the best params for import_logs.py :
+Just needed to configure the best params for import_logs.py, file `/usr/local/piwik/piwik.sh`:
 ```
 #!/bin/sh
 
-exec python /path/to/misc/log-analytics/import_logs.py \
- --url=http://localhost/ \
+/path/to/misc/log-analytics/import_logs.py \
+ --url=http://localhost/piwik/ \
  --idsite=1 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
  --log-format-name=nginx_json -
 ```
@@ -235,6 +240,37 @@ Aug 31 23:59:59 tt-srv-name www.tt.com: 1.1.1.1 - - [31/Aug/2014:23:59:59 +0200]
 
 ```
 --log-format-regex='.* ((?P<ip>\S+) \S+ \S+ \[(?P<date>.*?) (?P<timezone>.*?)\] "\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)").*'
+```
+
+##### Setup rsyslog
+
+Create new file `/etc/rsyslog.d/10-piwik.conf` with following content and restart rsyslog service afterwards:
+```
+# socket to which you should send nginx data
+$AddUnixListenSocket /var/cache/nginx/access.socket
+
+# message starts with tag, "nginx: <...>", which we remove
+$template piwik,"%msg:9:$%\n"
+
+# uncomment following line to debug what is sent to piwik and in which format
+# to check script part you could issue following command
+# and expected result is "1 requests imported successfully":
+# 'tail -1 /var/tmp/nginx.tmp | /usr/local/piwik/piwik.sh'
+
+#local0.* /var/tmp/nginx.tmp;piwik
+if $syslogfacility-text == 'local0' then ^/usr/local/piwik/piwik.sh;piwik
+```
+
+###### piwik.sh, rsyslog version
+
+`/usr/local/piwik/piwik.sh`, won't work without `--token-auth` parameter:
+```
+#!/bin/sh
+
+echo "${@}" | /path/to/misc/log-analytics/import_logs.py \
+ --url=https://localhost/piwik/ --token-auth=<SECRET> \
+ --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
+ --idsite=1 --recorders=4 --log-format-name=nginx_json -
 ```
 
 
