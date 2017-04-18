@@ -1692,7 +1692,8 @@ class Recorder(object):
             else:
                 hit.add_visit_custom_var("Not-Bot", hit.user_agent)
 
-        hit.add_page_custom_var("HTTP-code", hit.status)
+        if hit.is_error:
+            hit.add_page_custom_var("HTTP-code", hit.status)
 
         args = {
             'rec': '1',
