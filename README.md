@@ -394,6 +394,10 @@ Use piwiklog %v vhost_common main " "
 </VirtualHost>
 ```
 
+### License
+
+As [piwik](`https://github.com/piwik/piwik`) (which includes this code as a git reference), piwik-log-analytics is released under the GPLv3 or later.  Please refer to  [LEGALNOTICE](LEGALNOTICE) for copyright and trademark statements and [LICENSE.txt](LICENSE.txt) for the full text of the GPLv3.
+
 ### And that's all !
 
 
