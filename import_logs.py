@@ -459,6 +459,7 @@ class Configuration(object):
             usage='Usage: %prog [options] log_file [ log_file [...] ]',
             description="Import HTTP access logs to Piwik. "
                          "log_file is the path to a server access log file (uncompressed, .gz, .bz2, or specify - to read from stdin). "
+		         " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
                          " By default, the script will try to produce clean reports and will exclude bots, static files, discard http error and redirects, etc. This is customizable, see below.",
             epilog="About Piwik Server Log Analytics: http://piwik.org/log-analytics/ "
                    "              Found a bug? Please create a ticket in http://dev.piwik.org/ "
