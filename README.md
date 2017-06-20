@@ -31,7 +31,7 @@ The Log Analytics importer is designed to detect and import into Piwik as many l
 
  * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
  * Add a new test in [tests/tests.py](https://github.com/piwik/piwik-log-analytics/blob/master/tests/tests.py),
- * Test that the logs are imported successfully as you expected,
+ * Test that the logs are imported successfully as you expected (`tests/run_tests.sh`),
  * Open a Pull Request,
  * Check the test you have added works (the build should be green),
  * One Piwik team member will review and merge the Pull Request as soon as possible.
