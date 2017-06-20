@@ -564,15 +564,20 @@ class Configuration(object):
         option_parser.add_option(
             '--hostname', dest='hostnames', action='append', default=[],
             help="Accepted hostname (requests with other hostnames will be excluded). "
-            "Can be specified multiple times"
+            " You may use the star character * "
+            " Example: --hostname=*domain.com"
+            " Can be specified multiple times"
         )
         option_parser.add_option(
             '--exclude-path', dest='excluded_paths', action='append', default=[],
-            help="Any URL path matching this exclude-path will not be imported in Piwik. Can be specified multiple times"
+            help="Any URL path matching this exclude-path will not be imported in Piwik. "
+            " You must use the star character *. "
+            " Example: --exclude-path=*/admin/*"
+            " Can be specified multiple times. "
         )
         option_parser.add_option(
             '--exclude-path-from', dest='exclude_path_from',
-            help="Each line from this file is a path to exclude (see: --exclude-path)"
+            help="Each line from this file is a path to exclude. Each path must contain the character * to match a string. (see: --exclude-path)"
         )
         option_parser.add_option(
             '--include-path', dest='included_paths', action='append', default=[],

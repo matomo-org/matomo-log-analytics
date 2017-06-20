@@ -105,7 +105,7 @@ Apache configuration:
 
 cron job:
 ```
-5 0 * * * /var/www/html/piwik/misc/log-analytics/import_logs.py --url https://www.mysite.com/piwik --auth-user=someuser --auth-password=somepassword --exclude-path=/piwik/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+5 0 * * * /var/www/html/piwik/misc/log-analytics/import_logs.py --url https://www.mysite.com/piwik --auth-user=someuser --auth-password=somepassword --exclude-path=*/piwik/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
 ```
 
 Security tips:
