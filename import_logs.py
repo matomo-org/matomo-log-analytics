@@ -1556,7 +1556,7 @@ class DynamicResolver(object):
         else:
             # Workaround for empty Host bug issue #126
             if hit.host.strip() == '':
-                hit.host = 'nohost'
+                hit.host = 'no-hostname-found-in-log'
             return self._resolve_by_host(hit)
 
     def check_format(self, format):
