@@ -40,6 +40,7 @@ import functools
 import traceback
 import socket
 import textwrap
+import glob
 
 try:
     import json
@@ -824,7 +825,10 @@ class Configuration(object):
         if not self.filenames:
             print(option_parser.format_help())
             sys.exit(1)
-
+				
+        if len(self.filenames) == 1 and '*' in self.filenames[0]:
+            self.filenames = glob.glob(self.filenames[0])
+		
         # Configure logging before calling logging.{debug,info}.
         logging.basicConfig(
             format='%(asctime)s: [%(levelname)s] %(message)s',
