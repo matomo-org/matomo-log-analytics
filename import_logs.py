@@ -413,7 +413,7 @@ _S3_LOG_FORMAT = (
     '\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
-    '\s+(?P<session_time>\S+)'
+    '\s+(?P<session_time>[0-9-]+)'
 )
 _ELB_LOG_FORMAT = (
     '(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
