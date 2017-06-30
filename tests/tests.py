@@ -363,6 +363,7 @@ def check_s3_groups(groups):
     assert groups['date'] == '10/Feb/2012:16:42:07'
     assert groups['timezone'] == '-0500'
     assert groups['ip'] == '1.2.3.4'
+    assert groups['userid'] == 'arn:aws:iam::179580289999:user/phillip.boss'
     assert groups['path'] == '/index'
     assert groups['status'] == '200'
     assert groups['length'] == '368'
