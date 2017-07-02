@@ -232,6 +232,7 @@ class W3cExtendedFormat(RegexFormat):
         'sc-status': '(?P<status>\d+)',
         'sc-bytes': '(?P<length>\S+)',
         'cs-host': '(?P<host>\S+)',
+        'cs-method': '(?P<method>\S+)',
         'cs-username': '(?P<userid>\S+)',
         'time-taken': '(?P<generation_time_secs>[.\d]+)'
     }
@@ -403,14 +404,14 @@ _HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
 
 _COMMON_LOG_FORMAT = (
     '(?P<ip>[\w*.:-]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
-    '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+(?P<length>\S+)'
+    '"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+(?P<length>\S+)'
 )
 _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
     '\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _S3_LOG_FORMAT = (
     '\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>[\w*.:-]+)\s+'
-    '(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
+    '(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
     '\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
@@ -786,6 +787,10 @@ class Configuration(object):
                  "custom variable named 'User Name'. The list of available regex groups can be found in the documentation "
                  "for --log-format-regex (additional regex groups you may have defined "
                  "in --log-format-regex can also be used)."
+        )
+        option_parser.add_option(
+            '--track-http-method', dest='track_http_method', default=False,
+            help="Enables tracking of http method as custom page variable if method group is available in log format."
         )
         option_parser.add_option(
             '--retry-max-attempts', dest='max_attempts', default=PIWIK_DEFAULT_MAX_ATTEMPTS, type='int',
@@ -2289,6 +2294,14 @@ class Parser(object):
 
             if config.options.regex_groups_to_ignore:
                 format.remove_ignored_groups(config.options.regex_groups_to_ignore)
+
+            # Add http method page cvar
+            try:
+                httpmethod = format.get('method')
+                if config.options.track_http_method and httpmethod != '-':
+                    hit.add_page_custom_var('HTTP-method', httpmethod)
+            except:
+                pass
 
             try:
                 hit.query_string = format.get('query_string')
