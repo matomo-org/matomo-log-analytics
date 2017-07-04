@@ -114,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'incapsula':
             continue
 
         f = functools.partial(_test, format_name)
@@ -413,7 +413,7 @@ def test_format_parsing():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by IIS and netscaler logs; amazon cloudfront tested individually
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb' or format_name == 'incapsula':
             continue
 
         f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
@@ -743,6 +743,49 @@ def test_ovh_parsing():
     assert hits[0]['is_robot'] == False
     assert hits[0]['full_path'] == u'/'
     assert hits[0]['user_agent'] == u'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
+
+    assert len(hits) == 1
+
+    import_logs.config.options.log_hostname = 'foo'
+
+def test_incapsula_parsing():
+    """test parsing of incapsula logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/incapsula.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['incapsula']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == 'php'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == u''
+    assert hits[0]['args'] == {}
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/incapsula.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2017, 6, 28, 07, 26, 35)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == u'123.123.123.123'
+    assert hits[0]['query_string'] == u'variable=test'
+    assert hits[0]['path'] == u'page.php'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'page.php'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
 
     assert len(hits) == 1
 

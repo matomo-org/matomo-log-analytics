@@ -235,6 +235,7 @@ class RegexFormat(BaseFormat):
 class W3cExtendedFormat(RegexFormat):
 
     FIELDS_LINE_PREFIX = '#Fields: '
+    REGEX_UNKNOWN_FIELD = r'(?:".*?"|\S+)'
 
     fields = {
         'date': r'"?(?P<date>\d+[-\d+]+)"?',
@@ -293,7 +294,7 @@ class W3cExtendedFormat(RegexFormat):
             if not line.startswith('#'):
                 break
 
-            if line.startswith(W3cExtendedFormat.FIELDS_LINE_PREFIX):
+            if line.startswith(self.FIELDS_LINE_PREFIX):
                 fields_line = line
             else:
                 header_lines.append(line)
@@ -327,7 +328,7 @@ class W3cExtendedFormat(RegexFormat):
             try:
                 regex = expected_fields[field]
             except KeyError:
-                regex = r'(?:".*?"|\S+)'
+                regex = self.REGEX_UNKNOWN_FIELD
             full_regex.append(regex)
         full_regex = r'\s+'.join(full_regex)
 
@@ -362,6 +363,28 @@ class IisFormat(W3cExtendedFormat):
         super(IisFormat, self).__init__()
 
         self.name = 'iis'
+
+class IncapsulaFormat(W3cExtendedFormat):
+
+    # use custom unknown field regex to make resulting regex much simpler
+    REGEX_UNKNOWN_FIELD = r'".*?"'
+
+    fields = W3cExtendedFormat.fields.copy()
+    # redefines all fields as they are always encapsulated with "
+    fields.update({
+        'cs-uri': '"(?P<host>\S+)/(?P<path>\S+)"',
+        'cs-uri-query': '"(?P<query_string>\S*)"',
+        'c-ip': '"(?P<ip>[\w*.:-]*)"',
+        'cs(User-Agent)': '"(?P<user_agent>.*?)"',
+        'cs(Referer)': '"(?P<referrer>\S+)"',
+        'sc-status': '"(?P<status>\d+)"',
+        'cs-bytes': '"(?P<length>\d+)"',
+    })
+
+    def __init__(self):
+        super(IncapsulaFormat, self).__init__()
+
+        self.name = 'incapsula'
 
 class ShoutcastFormat(W3cExtendedFormat):
 
@@ -451,6 +474,7 @@ FORMATS = {
     'common_complete': RegexFormat('common_complete', _HOST_PREFIX + _NCSA_EXTENDED_LOG_FORMAT),
     'w3c_extended': W3cExtendedFormat(),
     'amazon_cloudfront': AmazonCloudFrontFormat(),
+    'incapsula': IncapsulaFormat(),
     'iis': IisFormat(),
     'shoutcast': ShoutcastFormat(),
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
