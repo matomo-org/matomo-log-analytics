@@ -387,6 +387,9 @@ def check_match_groups(format_name, groups):
     check_function = symbols['check_' + format_name + '_groups']
     return check_function(groups)
 
+def check_ovh_groups(groups):
+    check_common_complete_groups(groups)
+
 # parsing tests
 def test_format_parsing():
     # test format regex parses correctly

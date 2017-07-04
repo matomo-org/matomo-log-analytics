@@ -399,7 +399,8 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
-_HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
+_HOST_PREFIX = '(?P<host>([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,})(?::\d+)?\s+'
+
 _COMMON_LOG_FORMAT = (
     '(?P<ip>\S+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
     '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
@@ -421,6 +422,12 @@ _ELB_LOG_FORMAT = (
     '"\S+\s+\w+:\/\/(?P<host>[\w\-\.]*):\d+(?P<path>\/\S*)\s+[^"]+"\s+"(?P<user_agent>[^"]+)"\s+\S+\s+\S+'
 )
 
+_OVH_FORMAT = (
+    '(?P<ip>\S+)\s+' + _HOST_PREFIX + '(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
+    '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
+    '\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
+)
+
 FORMATS = {
     'common': RegexFormat('common', _COMMON_LOG_FORMAT),
     'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
@@ -434,6 +441,7 @@ FORMATS = {
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
+    'ovh': RegexFormat('ovh', _OVH_FORMAT)
 }
 
 ##
