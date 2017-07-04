@@ -14,7 +14,7 @@ Build status (master branch) [![Build Status](https://travis-ci.org/piwik/piwik-
 
 The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
  * all default log formats for: Nginx, Apache, IIS, Tomcat
- * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON
+ * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON, OVH
  * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs
  * streaming media server log files such as: Icecast
  * log files with and without the virtual host will be imported
@@ -68,6 +68,9 @@ If you wish to track all requests the following command would be used:
 * If you are importing Netscaler log files, make sure to specify the `--iis-time-taken-secs` option. Netscaler stores
   the time-taken field in seconds while most other formats use milliseconds. Using this option will ensure that the
   log importer interprets the field correctly.
+
+* Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
+  Those log formats are: OVH
 
 ## How to import your logs automatically every day?
 
