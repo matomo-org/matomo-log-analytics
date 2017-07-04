@@ -399,7 +399,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
-_HOST_PREFIX = '(?P<host>([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,})(?::\d+)?\s+'
+_HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
 
 _COMMON_LOG_FORMAT = (
     '(?P<ip>\S+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
@@ -2012,6 +2012,10 @@ class Parser(object):
         format_groups = 0
         for name, candidate_format in FORMATS.iteritems():
             logging.debug("Check format %s", name)
+
+            # skip auto detection for formats that can't be detected automatically
+            if name == 'ovh':
+                continue
 
             match = None
             try:

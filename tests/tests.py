@@ -113,7 +113,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh':
             continue
 
         f = functools.partial(_test, format_name)
@@ -656,6 +656,49 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['user_agent'] == u'Mozilla/4.0 (compatible; MSIE 5.0b1; Mac_PowerPC)'
 
     assert len(hits) == 1
+
+def test_ovh_parsing():
+    """test parsing of ovh logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/ovh.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['ovh']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'301'
+    assert hits[0]['userid'] == u'theuser'
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == u'/'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == u''
+    assert hits[0]['args'] == {'uid': u'theuser'}
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/ovh.log'
+    assert hits[0]['is_redirect'] == True
+    assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 21, 42, 07)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[0]['query_string'] == ''
+    assert hits[0]['path'] == u'/'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
+
+    assert len(hits) == 1
+
+    import_logs.config.options.log_hostname = 'foo'
 
 def test_amazon_cloudfront_rtmp_parsing():
     """test parsing of amazon cloudfront rtmp logs (which use extended W3C log format w/ custom fields for event info)"""
