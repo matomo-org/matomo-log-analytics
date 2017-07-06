@@ -377,8 +377,8 @@ class IncapsulaFormat(W3cExtendedFormat):
         'c-ip': '"(?P<ip>[\w*.:-]*)"',
         'cs(User-Agent)': '"(?P<user_agent>.*?)"',
         'cs(Referer)': '"(?P<referrer>\S+)"',
-        'sc-status': '"(?P<status>\d+)"',
-        'cs-bytes': '"(?P<length>\d+)"',
+        'sc-status': '"(?P<status>\d+?)"',
+        'cs-bytes': '"(?P<length>\d+?)"',
     })
 
     def __init__(self):
