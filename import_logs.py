@@ -372,19 +372,27 @@ class IncapsulaFormat(W3cExtendedFormat):
     fields = W3cExtendedFormat.fields.copy()
     # redefines all fields as they are always encapsulated with "
     fields.update({
-        'cs-uri': '"(?P<host>\S+)/(?P<path>\S+)"',
+        'cs-uri': '"(?P<host>[^\/\s]+)/(?P<path>\S+)"',
         'cs-uri-query': '"(?P<query_string>\S*)"',
         'c-ip': '"(?P<ip>[\w*.:-]*)"',
         'cs(User-Agent)': '"(?P<user_agent>.*?)"',
         'cs(Referer)': '"(?P<referrer>\S+)"',
-        'sc-status': '"(?P<status>\d+?)"',
-        'cs-bytes': '"(?P<length>\d+?)"',
+        'sc-status': '(?P<status>"\d*")',
+        'cs-bytes': '(?P<length>"\d*")',
     })
 
     def __init__(self):
         super(IncapsulaFormat, self).__init__()
 
         self.name = 'incapsula'
+
+    def get(self, key):
+        value = super(IncapsulaFormat, self).get(key);
+        if key == 'status' or key == 'length':
+            value = value.strip('"')
+        if key == 'status' and value == '':
+            value = '200'
+        return value
 
 class ShoutcastFormat(W3cExtendedFormat):
 
