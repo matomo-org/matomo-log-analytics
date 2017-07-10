@@ -783,15 +783,15 @@ def test_incapsula_parsing():
     assert hits[0]['lineno'] == 0
     assert hits[0]['ip'] == u'123.123.123.123'
     assert hits[0]['query_string'] == u'variable=test'
-    assert hits[0]['path'] == u'page.php'
+    assert hits[0]['path'] == u'/page.php'
     assert hits[0]['is_robot'] == False
-    assert hits[0]['full_path'] == u'page.php'
+    assert hits[0]['full_path'] == u'/page.php'
     assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
 
     assert hits[1]['status'] == u'200'
     assert hits[1]['userid'] == None
     assert hits[1]['is_error'] == False
-    assert hits[1]['extension'] == 'rss/news'
+    assert hits[1]['extension'] == '/rss/news'
     assert hits[1]['is_download'] == False
     assert hits[1]['referrer'] == u''
     assert hits[1]['args'] == {}
@@ -804,9 +804,9 @@ def test_incapsula_parsing():
     assert hits[1]['lineno'] == 1
     assert hits[1]['ip'] == u'125.125.125.125'
     assert hits[1]['query_string'] == u''
-    assert hits[1]['path'] == 'rss/news'
+    assert hits[1]['path'] == '/rss/news'
     assert hits[1]['is_robot'] == False
-    assert hits[1]['full_path'] == u'rss/news'
+    assert hits[1]['full_path'] == u'/rss/news'
     assert hits[1]['user_agent'] == u'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:45.0) Gecko/20100101 Thunderbird/45.8.0 Lightning/4.7.8'
 
     assert len(hits) == 2

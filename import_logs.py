@@ -372,7 +372,7 @@ class IncapsulaFormat(W3cExtendedFormat):
     fields = W3cExtendedFormat.fields.copy()
     # redefines all fields as they are always encapsulated with "
     fields.update({
-        'cs-uri': '"(?P<host>[^\/\s]+)/(?P<path>\S+)"',
+        'cs-uri': '"(?P<host>[^\/\s]+)(?P<path>\S+)"',
         'cs-uri-query': '"(?P<query_string>\S*)"',
         'c-ip': '"(?P<ip>[\w*.:-]*)"',
         'cs(User-Agent)': '"(?P<user_agent>.*?)"',
