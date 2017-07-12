@@ -114,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'incapsula':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name)
@@ -413,7 +413,7 @@ def test_format_parsing():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by IIS and netscaler logs; amazon cloudfront tested individually
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb' or format_name == 'incapsula':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
@@ -748,16 +748,16 @@ def test_ovh_parsing():
 
     import_logs.config.options.log_hostname = 'foo'
 
-def test_incapsula_parsing():
-    """test parsing of incapsula logs (which needs to be forced, as it's not autodetected)"""
+def test_incapsulaw3c_parsing():
+    """test parsing of incapsula w3c logs (which needs to be forced, as it's not autodetected)"""
 
-    file_ = 'logs/incapsula.log'
+    file_ = 'logs/incapsula_w3c.log'
 
     # have to override previous globals override for this test
     import_logs.config.options.custom_w3c_fields = {}
     Recorder.recorders = []
     import_logs.parser = import_logs.Parser()
-    import_logs.config.format = import_logs.FORMATS['incapsula']
+    import_logs.config.format = import_logs.FORMATS['incapsula_w3c']
     import_logs.config.options.log_hostname = None
     import_logs.config.options.enable_http_redirects = True
     import_logs.config.options.enable_http_errors = True
@@ -777,7 +777,7 @@ def test_incapsula_parsing():
     assert hits[0]['length'] == 10117
     assert hits[0]['generation_time_milli'] == 0
     assert hits[0]['host'] == 'www.example.com'
-    assert hits[0]['filename'] == 'logs/incapsula.log'
+    assert hits[0]['filename'] == 'logs/incapsula_w3c.log'
     assert hits[0]['is_redirect'] == False
     assert hits[0]['date'] == datetime.datetime(2017, 6, 28, 07, 26, 35)
     assert hits[0]['lineno'] == 0
@@ -798,7 +798,7 @@ def test_incapsula_parsing():
     assert hits[1]['length'] == 0
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['host'] == 'www.example.com'
-    assert hits[1]['filename'] == 'logs/incapsula.log'
+    assert hits[1]['filename'] == 'logs/incapsula_w3c.log'
     assert hits[1]['is_redirect'] == False
     assert hits[1]['date'] == datetime.datetime(2017, 6, 26, 18, 21, 17)
     assert hits[1]['lineno'] == 1

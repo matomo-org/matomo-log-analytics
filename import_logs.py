@@ -364,7 +364,7 @@ class IisFormat(W3cExtendedFormat):
 
         self.name = 'iis'
 
-class IncapsulaFormat(W3cExtendedFormat):
+class IncapsulaW3CFormat(W3cExtendedFormat):
 
     # use custom unknown field regex to make resulting regex much simpler
     REGEX_UNKNOWN_FIELD = r'".*?"'
@@ -382,12 +382,12 @@ class IncapsulaFormat(W3cExtendedFormat):
     })
 
     def __init__(self):
-        super(IncapsulaFormat, self).__init__()
+        super(IncapsulaW3CFormat, self).__init__()
 
-        self.name = 'incapsula'
+        self.name = 'incapsula_w3c'
 
     def get(self, key):
-        value = super(IncapsulaFormat, self).get(key);
+        value = super(IncapsulaW3CFormat, self).get(key);
         if key == 'status' or key == 'length':
             value = value.strip('"')
         if key == 'status' and value == '':
@@ -482,7 +482,7 @@ FORMATS = {
     'common_complete': RegexFormat('common_complete', _HOST_PREFIX + _NCSA_EXTENDED_LOG_FORMAT),
     'w3c_extended': W3cExtendedFormat(),
     'amazon_cloudfront': AmazonCloudFrontFormat(),
-    'incapsula': IncapsulaFormat(),
+    'incapsula_w3c': IncapsulaW3CFormat(),
     'iis': IisFormat(),
     'shoutcast': ShoutcastFormat(),
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
