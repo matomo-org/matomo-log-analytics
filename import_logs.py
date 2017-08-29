@@ -1407,15 +1407,22 @@ class Piwik(object):
                 if hasattr(e, 'read'):
                     message = message + ", response: " + e.read()
 
+                try:
+                    delay_after_failure = config.options.delay_after_failure
+                    max_attempts = config.options.max_attempts
+                except NameError:
+                    delay_after_failure = PIWIK_DEFAULT_DELAY_AFTER_FAILURE
+                    max_attempts = PIWIK_DEFAULT_MAX_ATTEMPTS
+
                 errors += 1
-                if errors == config.options.max_attempts:
+                if errors == max_attempts:
                     logging.info("Max number of attempts reached, server is unreachable!")
 
                     raise Piwik.Error(message, code)
                 else:
                     logging.info("Retrying request, attempt number %d" % (errors + 1))
 
-                    time.sleep(config.options.delay_after_failure)
+                    time.sleep(delay_after_failure)
 
     @classmethod
     def call(cls, path, args, expected_content=None, headers=None, data=None, on_failure=None):
