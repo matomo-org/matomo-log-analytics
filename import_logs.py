@@ -4,11 +4,11 @@
 #
 # Piwik - free/libre analytics platform
 #
-# @link http://piwik.org
-# @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
+# @link https://piwik.org
+# @license https://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
 # @version $Id$
 #
-# For more info see: http://piwik.org/log-analytics/ and http://piwik.org/docs/log-analytics-tool-how-to/
+# For more info see: https://piwik.org/log-analytics/ and https://piwik.org/docs/log-analytics-tool-how-to/
 #
 # Requires Python 2.6 or 2.7
 #
@@ -469,8 +469,8 @@ class Configuration(object):
                          "log_file is the path to a server access log file (uncompressed, .gz, .bz2, or specify - to read from stdin). "
 		         " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
                          " By default, the script will try to produce clean reports and will exclude bots, static files, discard http error and redirects, etc. This is customizable, see below.",
-            epilog="About Piwik Server Log Analytics: http://piwik.org/log-analytics/ "
-                   "              Found a bug? Please create a ticket in http://dev.piwik.org/ "
+            epilog="About Piwik Server Log Analytics: https://piwik.org/log-analytics/ "
+                   "              Found a bug? Please create a ticket in https://dev.piwik.org/ "
                    "              Please send your suggestions or successful user story to hello@piwik.org "
         )
 
@@ -679,7 +679,7 @@ class Configuration(object):
         option_parser.add_option(
             '--replay-tracking', dest='replay_tracking',
             action='store_true', default=False,
-            help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee http://piwik.org/faq/how-to/faq_17033/"
+            help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee https://piwik.org/faq/how-to/faq_17033/"
         )
         option_parser.add_option(
             '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default='piwik.php',
