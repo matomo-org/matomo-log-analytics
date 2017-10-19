@@ -2259,13 +2259,14 @@ class Parser(object):
 
             try:
                 hit.generation_time_milli = float(format.get('generation_time_milli'))
-            except BaseFormatException:
+            except (ValueError, BaseFormatException):
                 try:
                     hit.generation_time_milli = float(format.get('generation_time_micro')) / 1000
-                except BaseFormatException:
+                except (ValueError, BaseFormatException):
                     try:
                         hit.generation_time_milli = float(format.get('generation_time_secs')) * 1000
-                    except BaseFormatException:
+                    except (ValueError, BaseFormatException):
+                        invalid_line(line, 'invalid generation time')
                         hit.generation_time_milli = 0
 
             if config.options.log_hostname:
