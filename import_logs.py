@@ -410,7 +410,7 @@ _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
 )
 _S3_LOG_FORMAT = (
     '\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>\S+)\s+'
-    '\S+\s+\S+\s+\S+\s+\S+\s+"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+\S+\s+(?P<length>\S+)\s+'
+    '(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+\S+\s+(?P<length>\S+)\s+'
     '\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
