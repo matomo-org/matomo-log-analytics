@@ -13,6 +13,13 @@
 # Requires Python 2.6 or 2.7
 #
 
+import sys
+
+if sys.version_info[0] != 2:
+    print('The log importer currently does not work with Python 3 (or higher)')
+    print('Please use Python 2.6 or 2.7')
+    sys.exit(1)
+
 import base64
 import bz2
 import ConfigParser
@@ -29,7 +36,6 @@ import os
 import os.path
 import Queue
 import re
-import sys
 import threading
 import time
 import urllib
