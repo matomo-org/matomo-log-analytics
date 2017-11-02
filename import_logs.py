@@ -467,7 +467,7 @@ class Configuration(object):
             usage='Usage: %prog [options] log_file [ log_file [...] ]',
             description="Import HTTP access logs to Piwik. "
                          "log_file is the path to a server access log file (uncompressed, .gz, .bz2, or specify - to read from stdin). "
-		         " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
+                         " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
                          " By default, the script will try to produce clean reports and will exclude bots, static files, discard http error and redirects, etc. This is customizable, see below.",
             epilog="About Piwik Server Log Analytics: https://piwik.org/log-analytics/ "
                    "              Found a bug? Please create a ticket in https://dev.piwik.org/ "
@@ -911,7 +911,7 @@ class Configuration(object):
         if not self.options.piwik_token_auth:
             try:
                 self.options.piwik_token_auth = self._get_token_auth()
-            except Piwik.Error, e:
+            except Piwik.Error as e:
                 fatal_error(e)
         logging.debug('Authentication token token_auth is: %s', self.options.piwik_token_auth)
 
@@ -951,7 +951,7 @@ class Configuration(object):
                     _token_auth='',
                     _url=self.options.piwik_api_url,
                 )
-            except urllib2.URLError, e:
+            except urllib2.URLError as e:
                 fatal_error('error when fetching token_auth from the API: %s' % e)
 
             try:
@@ -1133,7 +1133,7 @@ The following lines were not tracked by Piwik, either due to a malformed tracker
 
 ''' % textwrap.fill(", ".join(self.invalid_lines), 80)
 
-        print '''
+        print('''
 %(invalid_lines)sLogs import summary
 -------------------
 
@@ -1224,7 +1224,7 @@ Processing your log data
         )),
     'url': config.options.piwik_api_url,
     'invalid_lines': invalid_lines_summary
-}
+})
 
     ##
     ## The monitor is a thread that prints a short summary each second.
@@ -1235,12 +1235,12 @@ Processing your log data
         while not self.monitor_stop:
             current_total = stats.count_lines_recorded.value
             time_elapsed = time.time() - self.time_start
-            print '%d lines parsed, %d lines recorded, %d records/sec (avg), %d records/sec (current)' % (
+            print('%d lines parsed, %d lines recorded, %d records/sec (avg), %d records/sec (current)' % (
                 stats.count_lines_parsed.value,
                 current_total,
                 current_total / time_elapsed if time_elapsed != 0 else 0,
                 (current_total - latest_total_recorded) / config.options.show_progress_delay,
-            )
+            ))
             latest_total_recorded = current_total
             time.sleep(config.options.show_progress_delay)
 
@@ -1390,7 +1390,7 @@ class Piwik(object):
 
                     raise urllib2.URLError(error_message)
                 return response
-            except (urllib2.URLError, httplib.HTTPException, ValueError, socket.timeout), e:
+            except (urllib2.URLError, httplib.HTTPException, ValueError, socket.timeout) as e:
                 logging.info('Error when connecting to Piwik: %s', e)
 
                 code = None
@@ -1648,7 +1648,7 @@ class Recorder(object):
             if len(hits) > 0:
                 try:
                     self._record_hits(hits)
-                except Piwik.Error, e:
+                except Piwik.Error as e:
                     fatal_error(e, hits[0].filename, hits[0].lineno) # approximate location of error
             self.queue.task_done()
 
@@ -1662,7 +1662,7 @@ class Recorder(object):
 
                 try:
                     self._record_hits([hit])
-                except Piwik.Error, e:
+                except Piwik.Error as e:
                     fatal_error(e, hit.filename, hit.lineno)
             else:
                 self.unrecorded_hits = self.queue.get()
@@ -1747,15 +1747,15 @@ class Recorder(object):
             args['bots'] = '1'
 
         if hit.is_error or hit.is_redirect:
-			args['action_name'] = '%s%sURL = %s%s' % (
-				hit.status,
-				config.options.title_category_delimiter,
-				urllib.quote(args['url'], ''),
-				("%sFrom = %s" % ( 
-					config.options.title_category_delimiter,
-					urllib.quote(args['urlref'], '')
-				) if args['urlref'] != ''  else '')
-			)
+            args['action_name'] = '%s%sURL = %s%s' % (
+                hit.status,
+                config.options.title_category_delimiter,
+                urllib.quote(args['url'], ''),
+                ("%sFrom = %s" % (
+                    config.options.title_category_delimiter,
+                    urllib.quote(args['urlref'], '')
+                ) if args['urlref'] != ''  else '')
+            )
 
         if hit.generation_time_milli > 0:
             args['gt_ms'] = int(hit.generation_time_milli)
@@ -1836,7 +1836,7 @@ class Recorder(object):
                     logging.info("The Piwik tracker identified %s invalid requests on lines: %s" % (invalid_count, invalid_lines_str))
                 elif 'invalid' in response and response['invalid'] > 0:
                     logging.info("The Piwik tracker identified %s invalid requests." % response['invalid'])
-            except Piwik.Error, e:
+            except Piwik.Error as e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
                     fatal_error("Server returned status 400 (Bad Request).\nIs the BulkTracking plugin disabled?", hits[0].filename, hits[0].lineno)
@@ -1849,7 +1849,7 @@ class Recorder(object):
         try:
             json.loads(result)
             return True
-        except ValueError, e:
+        except ValueError as e:
             return False
 
     def _on_tracking_failure(self, response, data):
@@ -2030,7 +2030,7 @@ class Parser(object):
                     match = candidate_format.check_format_line(lineOrFile)
                 else:
                     match = candidate_format.check_format(lineOrFile)
-            except Exception, e:
+            except Exception as e:
                 logging.debug('Error in format checking: %s', traceback.format_exc())
                 pass
 
@@ -2124,7 +2124,7 @@ class Parser(object):
                 file = open_func(filename, 'r')
 
         if config.options.show_progress:
-            print 'Parsing log %s...' % filename
+            print('Parsing log %s...' % filename)
 
         if config.format:
             # The format was explicitely specified.
@@ -2314,7 +2314,7 @@ class Parser(object):
             date_string = format.get('date')
             try:
                 hit.date = datetime.datetime.strptime(date_string, format.date_format)
-            except ValueError, e:
+            except ValueError as e:
                 invalid_line(line, 'invalid date or invalid format: %s' % str(e))
                 continue
 
