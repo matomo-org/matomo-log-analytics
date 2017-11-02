@@ -4,11 +4,11 @@
 #
 # Piwik - free/libre analytics platform
 #
-# @link http://piwik.org
-# @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
+# @link https://piwik.org
+# @license https://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
 # @version $Id$
 #
-# For more info see: http://piwik.org/log-analytics/ and http://piwik.org/docs/log-analytics-tool-how-to/
+# For more info see: https://piwik.org/log-analytics/ and https://piwik.org/docs/log-analytics-tool-how-to/
 #
 # Requires Python 2.6 or 2.7
 #
@@ -400,6 +400,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
             return super(AmazonCloudFrontFormat, self).get(key)
 
 _HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
+
 _COMMON_LOG_FORMAT = (
     '(?P<ip>[\w*.:-]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
     '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+(?P<length>\S+)'
@@ -409,7 +410,7 @@ _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
 )
 _S3_LOG_FORMAT = (
     '\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>[\w*.:-]+)\s+'
-    '\S+\s+\S+\s+\S+\s+\S+\s+"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
+    '(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
     '\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
@@ -419,6 +420,12 @@ _ELB_LOG_FORMAT = (
     '(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
     '(?P<status>\d+)\s+\S+\s+\S+\s+(?P<length>\S+)\s+'
     '"\S+\s+\w+:\/\/(?P<host>[\w\-\.]*):\d+(?P<path>\/\S*)\s+[^"]+"\s+"(?P<user_agent>[^"]+)"\s+\S+\s+\S+'
+)
+
+_OVH_FORMAT = (
+    '(?P<ip>\S+)\s+' + _HOST_PREFIX + '(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
+    '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
+    '\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 
 FORMATS = {
@@ -434,6 +441,7 @@ FORMATS = {
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
+    'ovh': RegexFormat('ovh', _OVH_FORMAT)
 }
 
 ##
@@ -461,8 +469,8 @@ class Configuration(object):
                          "log_file is the path to a server access log file (uncompressed, .gz, .bz2, or specify - to read from stdin). "
 		         " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
                          " By default, the script will try to produce clean reports and will exclude bots, static files, discard http error and redirects, etc. This is customizable, see below.",
-            epilog="About Piwik Server Log Analytics: http://piwik.org/log-analytics/ "
-                   "              Found a bug? Please create a ticket in http://dev.piwik.org/ "
+            epilog="About Piwik Server Log Analytics: https://piwik.org/log-analytics/ "
+                   "              Found a bug? Please create a ticket in https://dev.piwik.org/ "
                    "              Please send your suggestions or successful user story to hello@piwik.org "
         )
 
@@ -671,7 +679,7 @@ class Configuration(object):
         option_parser.add_option(
             '--replay-tracking', dest='replay_tracking',
             action='store_true', default=False,
-            help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee http://piwik.org/faq/how-to/faq_17033/"
+            help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee https://piwik.org/faq/how-to/faq_17033/"
         )
         option_parser.add_option(
             '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default='piwik.php',
@@ -1399,15 +1407,22 @@ class Piwik(object):
                 if hasattr(e, 'read'):
                     message = message + ", response: " + e.read()
 
+                try:
+                    delay_after_failure = config.options.delay_after_failure
+                    max_attempts = config.options.max_attempts
+                except NameError:
+                    delay_after_failure = PIWIK_DEFAULT_DELAY_AFTER_FAILURE
+                    max_attempts = PIWIK_DEFAULT_MAX_ATTEMPTS
+
                 errors += 1
-                if errors == config.options.max_attempts:
+                if errors == max_attempts:
                     logging.info("Max number of attempts reached, server is unreachable!")
 
                     raise Piwik.Error(message, code)
                 else:
                     logging.info("Retrying request, attempt number %d" % (errors + 1))
 
-                    time.sleep(config.options.delay_after_failure)
+                    time.sleep(delay_after_failure)
 
     @classmethod
     def call(cls, path, args, expected_content=None, headers=None, data=None, on_failure=None):
@@ -2005,6 +2020,10 @@ class Parser(object):
         for name, candidate_format in FORMATS.iteritems():
             logging.debug("Check format %s", name)
 
+            # skip auto detection for formats that can't be detected automatically
+            if name == 'ovh':
+                continue
+
             match = None
             try:
                 if isinstance(lineOrFile, basestring):
@@ -2240,13 +2259,14 @@ class Parser(object):
 
             try:
                 hit.generation_time_milli = float(format.get('generation_time_milli'))
-            except BaseFormatException:
+            except (ValueError, BaseFormatException):
                 try:
                     hit.generation_time_milli = float(format.get('generation_time_micro')) / 1000
-                except BaseFormatException:
+                except (ValueError, BaseFormatException):
                     try:
                         hit.generation_time_milli = float(format.get('generation_time_secs')) * 1000
-                    except BaseFormatException:
+                    except (ValueError, BaseFormatException):
+                        invalid_line(line, 'invalid generation time')
                         hit.generation_time_milli = 0
 
             if config.options.log_hostname:
