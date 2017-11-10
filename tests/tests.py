@@ -187,6 +187,10 @@ class Options(object):
     regex_groups_to_ignore = None
     replay_tracking_expected_tracker_file = 'piwik.php'
     debug_request_limit = None
+    exclude_host = []
+    include_host = []
+    exclude_older_than = None
+    exclude_newer_than = None
 
 class Config(object):
     """Mock configuration."""
