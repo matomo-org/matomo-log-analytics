@@ -799,7 +799,20 @@ class Configuration(object):
             '--request-timeout', dest='request_timeout', default=DEFAULT_SOCKET_TIMEOUT, type='int',
             help="The maximum number of seconds to wait before terminating an HTTP request to Piwik."
         )
+        option_parser.add_option(
+            '--include-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'include_host'), # TODO
+            help="Only import logs from the specified host(s)."
+        )
+        option_parser.add_option(
+            '--exclude-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'exclude_host'),
+            help="Only import logs that are not from the specified host(s)."
+        )
         return option_parser
+
+    def _add_to_array(self, option_attr_name, option, opt_str, value, parser):
+        if not hasattr(parser.values, option_attr_name):
+            setattr(parser.values, option_attr_name, [])
+        getattr(parser.values, option_attr_name).append(value)
 
     def _set_option_map(self, option_attr_name, option, opt_str, value, parser):
         """
@@ -2098,6 +2111,17 @@ class Parser(object):
         logging.debug('Format %s is the best match', format.name)
         return format
 
+    def is_filtered(self, hit):
+        if config.options.exclude_host and len(config.options.exclude_host) > 0:
+            if hit.host in config.options.exclude_host:
+                return True
+
+        if config.options.include_host and len(config.options.include_host) > 0:
+            if hit.host not in config.options.include_host:
+                return True
+
+        return False
+
     def parse(self, filename):
         """
         Parse the specified filename and insert hits in the queue.
@@ -2346,6 +2370,10 @@ class Parser(object):
                 except UnicodeDecodeError:
                     invalid_line(line, 'invalid encoding')
                     continue
+
+            if self.is_filtered(hit):
+                invalid_line(line, 'filtered out')
+                continue
 
             hits.append(hit)
 
