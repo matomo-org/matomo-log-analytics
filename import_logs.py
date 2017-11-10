@@ -800,17 +800,29 @@ class Configuration(object):
             help="The maximum number of seconds to wait before terminating an HTTP request to Piwik."
         )
         option_parser.add_option(
-            '--include-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'include_host'), # TODO
+            '--include-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'include_host'),
             help="Only import logs from the specified host(s)."
         )
         option_parser.add_option(
             '--exclude-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'exclude_host'),
             help="Only import logs that are not from the specified host(s)."
         )
+        option_parser.add_option(
+            '--exclude-older-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_older_than'),
+            help="Ignore logs older than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss."
+        )
+        option_parser.add_option(
+            '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
+            help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss."
+        )
         return option_parser
 
+    def _set_date(self, option_attr_name, option, opt_str, value, parser):
+        date = datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        setattr(parser.values, option_attr_name, date)
+
     def _add_to_array(self, option_attr_name, option, opt_str, value, parser):
-        if not hasattr(parser.values, option_attr_name):
+        if not hasattr(parser.values, option_attr_name) or not getattr(parser.values, option_attr_name):
             setattr(parser.values, option_attr_name, [])
         getattr(parser.values, option_attr_name).append(value)
 
@@ -2112,13 +2124,27 @@ class Parser(object):
         return format
 
     def is_filtered(self, hit):
-        if config.options.exclude_host and len(config.options.exclude_host) > 0:
-            if hit.host in config.options.exclude_host:
+        host = None
+        if hasattr(hit, 'host'):
+            host = hit.host
+        else:
+            try:
+                host = urlparse.urlparse(hit.path).hostname
+            except:
+                pass
+
+        if host:
+            if config.options.exclude_host and len(config.options.exclude_host) > 0 and host in config.options.exclude_host:
                 return True
 
-        if config.options.include_host and len(config.options.include_host) > 0:
-            if hit.host not in config.options.include_host:
+            if config.options.include_host and len(config.options.include_host) > 0 and host not in config.options.include_host:
                 return True
+
+        if config.options.exclude_older_than and hit.date < config.options.exclude_older_than:
+            return True
+
+        if config.options.exclude_newer_than and hit.date > config.options.exclude_newer_than:
+            return True
 
         return False
 
