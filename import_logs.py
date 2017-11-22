@@ -1105,6 +1105,8 @@ class Statistics(object):
 
         # Do not match the regexp.
         self.count_lines_invalid = self.Counter()
+        # Were filtered out.
+        self.count_lines_filtered = self.Counter()
         # No site ID found by the resolver.
         self.count_lines_no_site = self.Counter()
         # Hostname filtered by config.options.hostnames
@@ -1180,6 +1182,7 @@ The following lines were not tracked by Piwik, either due to a malformed tracker
         %(count_lines_skipped_http_errors)d HTTP errors
         %(count_lines_skipped_http_redirects)d HTTP redirects
         %(count_lines_invalid)d invalid log lines
+        %(count_lines_filtered)d filtered log lines
         %(count_lines_no_site)d requests did not match any known site
         %(count_lines_hostname_skipped)d requests did not match any --hostname
         %(count_lines_skipped_user_agent)d requests done by bots, search engines...
@@ -1214,6 +1217,7 @@ Processing your log data
     'count_lines_downloads': self.count_lines_downloads.value,
     'total_lines_ignored': sum([
             self.count_lines_invalid.value,
+            self.count_lines_filtered.value,
             self.count_lines_skipped_user_agent.value,
             self.count_lines_skipped_http_errors.value,
             self.count_lines_skipped_http_redirects.value,
@@ -1223,6 +1227,7 @@ Processing your log data
             self.count_lines_hostname_skipped.value,
         ]),
     'count_lines_invalid': self.count_lines_invalid.value,
+    'count_lines_filtered': self.count_lines_filtered.value,
     'count_lines_skipped_user_agent': self.count_lines_skipped_user_agent.value,
     'count_lines_skipped_http_errors': self.count_lines_skipped_http_errors.value,
     'count_lines_skipped_http_redirects': self.count_lines_skipped_http_redirects.value,
@@ -2147,18 +2152,18 @@ class Parser(object):
 
         if host:
             if config.options.exclude_host and len(config.options.exclude_host) > 0 and host in config.options.exclude_host:
-                return True
+                return (True, 'host matched --exclude-host')
 
             if config.options.include_host and len(config.options.include_host) > 0 and host not in config.options.include_host:
-                return True
+                return (True, 'host did not match --include-host')
 
         if config.options.exclude_older_than and hit.date < config.options.exclude_older_than:
-            return True
+            return (True, 'date is older than --exclude-older-than')
 
         if config.options.exclude_newer_than and hit.date > config.options.exclude_newer_than:
-            return True
+            return (True, 'date is newer than --exclude-newer-than')
 
-        return False
+        return (False, None)
 
     def parse(self, filename):
         """
@@ -2168,6 +2173,11 @@ class Parser(object):
             stats.count_lines_invalid.increment()
             if config.options.debug >= 2:
                 logging.debug('Invalid line detected (%s): %s' % (reason, line))
+
+        def filtered_line(line, reason):
+            stats.count_lines_filtered.increment()
+            if config.options.debug >= 2:
+                logging.debug('Filtered line out (%s): %s' % (reason, line))
 
         if filename == '-':
             filename = '(stdin)'
@@ -2409,8 +2419,9 @@ class Parser(object):
                     invalid_line(line, 'invalid encoding')
                     continue
 
-            if self.is_filtered(hit):
-                invalid_line(line, 'filtered out')
+            (is_filtered, reason) = self.is_filtered(hit)
+            if is_filtered:
+                filtered_line(line, reason)
                 continue
 
             hits.append(hit)
