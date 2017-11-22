@@ -809,16 +809,28 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--exclude-older-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_older_than'),
-            help="Ignore logs older than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss."
+            help="Ignore logs older than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
         option_parser.add_option(
             '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
-            help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss."
+            help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
         return option_parser
 
     def _set_date(self, option_attr_name, option, opt_str, value, parser):
-        date = datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        try:
+            (date_str, timezone) = value.rsplit(' ', 1)
+        except:
+            fatal_error("Invalid date value '%s'." % value)
+
+        if not re.match('[-+][0-9]{4}', timezone):
+            fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
+
+        timezone = float(timezone)
+
+        date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        date -= datetime.timedelta(hours=timezone/100)
+
         setattr(parser.values, option_attr_name, date)
 
     def _add_to_array(self, option_attr_name, option, opt_str, value, parser):
