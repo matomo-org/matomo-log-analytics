@@ -799,7 +799,44 @@ class Configuration(object):
             '--request-timeout', dest='request_timeout', default=DEFAULT_SOCKET_TIMEOUT, type='int',
             help="The maximum number of seconds to wait before terminating an HTTP request to Piwik."
         )
+        option_parser.add_option(
+            '--include-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'include_host'),
+            help="Only import logs from the specified host(s)."
+        )
+        option_parser.add_option(
+            '--exclude-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'exclude_host'),
+            help="Only import logs that are not from the specified host(s)."
+        )
+        option_parser.add_option(
+            '--exclude-older-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_older_than'),
+            help="Ignore logs older than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
+        )
+        option_parser.add_option(
+            '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
+            help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
+        )
         return option_parser
+
+    def _set_date(self, option_attr_name, option, opt_str, value, parser):
+        try:
+            (date_str, timezone) = value.rsplit(' ', 1)
+        except:
+            fatal_error("Invalid date value '%s'." % value)
+
+        if not re.match('[-+][0-9]{4}', timezone):
+            fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
+
+        timezone = float(timezone)
+
+        date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        date -= datetime.timedelta(hours=timezone/100)
+
+        setattr(parser.values, option_attr_name, date)
+
+    def _add_to_array(self, option_attr_name, option, opt_str, value, parser):
+        if not hasattr(parser.values, option_attr_name) or not getattr(parser.values, option_attr_name):
+            setattr(parser.values, option_attr_name, [])
+        getattr(parser.values, option_attr_name).append(value)
 
     def _set_option_map(self, option_attr_name, option, opt_str, value, parser):
         """
@@ -1068,6 +1105,8 @@ class Statistics(object):
 
         # Do not match the regexp.
         self.count_lines_invalid = self.Counter()
+        # Were filtered out.
+        self.count_lines_filtered = self.Counter()
         # No site ID found by the resolver.
         self.count_lines_no_site = self.Counter()
         # Hostname filtered by config.options.hostnames
@@ -1143,6 +1182,7 @@ The following lines were not tracked by Piwik, either due to a malformed tracker
         %(count_lines_skipped_http_errors)d HTTP errors
         %(count_lines_skipped_http_redirects)d HTTP redirects
         %(count_lines_invalid)d invalid log lines
+        %(count_lines_filtered)d filtered log lines
         %(count_lines_no_site)d requests did not match any known site
         %(count_lines_hostname_skipped)d requests did not match any --hostname
         %(count_lines_skipped_user_agent)d requests done by bots, search engines...
@@ -1177,6 +1217,7 @@ Processing your log data
     'count_lines_downloads': self.count_lines_downloads.value,
     'total_lines_ignored': sum([
             self.count_lines_invalid.value,
+            self.count_lines_filtered.value,
             self.count_lines_skipped_user_agent.value,
             self.count_lines_skipped_http_errors.value,
             self.count_lines_skipped_http_redirects.value,
@@ -1186,6 +1227,7 @@ Processing your log data
             self.count_lines_hostname_skipped.value,
         ]),
     'count_lines_invalid': self.count_lines_invalid.value,
+    'count_lines_filtered': self.count_lines_filtered.value,
     'count_lines_skipped_user_agent': self.count_lines_skipped_user_agent.value,
     'count_lines_skipped_http_errors': self.count_lines_skipped_http_errors.value,
     'count_lines_skipped_http_redirects': self.count_lines_skipped_http_redirects.value,
@@ -2098,6 +2140,31 @@ class Parser(object):
         logging.debug('Format %s is the best match', format.name)
         return format
 
+    def is_filtered(self, hit):
+        host = None
+        if hasattr(hit, 'host'):
+            host = hit.host
+        else:
+            try:
+                host = urlparse.urlparse(hit.path).hostname
+            except:
+                pass
+
+        if host:
+            if config.options.exclude_host and len(config.options.exclude_host) > 0 and host in config.options.exclude_host:
+                return (True, 'host matched --exclude-host')
+
+            if config.options.include_host and len(config.options.include_host) > 0 and host not in config.options.include_host:
+                return (True, 'host did not match --include-host')
+
+        if config.options.exclude_older_than and hit.date < config.options.exclude_older_than:
+            return (True, 'date is older than --exclude-older-than')
+
+        if config.options.exclude_newer_than and hit.date > config.options.exclude_newer_than:
+            return (True, 'date is newer than --exclude-newer-than')
+
+        return (False, None)
+
     def parse(self, filename):
         """
         Parse the specified filename and insert hits in the queue.
@@ -2106,6 +2173,11 @@ class Parser(object):
             stats.count_lines_invalid.increment()
             if config.options.debug >= 2:
                 logging.debug('Invalid line detected (%s): %s' % (reason, line))
+
+        def filtered_line(line, reason):
+            stats.count_lines_filtered.increment()
+            if config.options.debug >= 2:
+                logging.debug('Filtered line out (%s): %s' % (reason, line))
 
         if filename == '-':
             filename = '(stdin)'
@@ -2346,6 +2418,11 @@ class Parser(object):
                 except UnicodeDecodeError:
                     invalid_line(line, 'invalid encoding')
                     continue
+
+            (is_filtered, reason) = self.is_filtered(hit)
+            if is_filtered:
+                filtered_line(line, reason)
+                continue
 
             hits.append(hit)
 
