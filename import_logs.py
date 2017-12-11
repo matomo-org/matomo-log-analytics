@@ -29,6 +29,7 @@ import os
 import os.path
 import Queue
 import re
+import ssl
 import sys
 import threading
 import time
@@ -815,6 +816,13 @@ class Configuration(object):
             '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
             help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
+
+        option_parser.add_option(
+            '--accept-invalid-ssl-certificate',
+            dest='accept_invalid_ssl_certificate', action='store_true',
+            default=False,
+            help="Do not verify the SSL / TLS certificate when contacting the Piwik server."
+        )
         return option_parser
 
     def _set_date(self, option_attr_name, option, opt_str, value, parser):
@@ -1358,7 +1366,16 @@ class Piwik(object):
             base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
             request.add_header("Authorization", "Basic %s" % base64string)        
 
-        opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging())
+        # Use non-default SSL context if invalid certificates shall be
+        # accepted.
+        if config.options.accept_invalid_ssl_certificate:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context = None
+        opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging(),
+                                      urllib2.HTTPSHandler(context=ssl_context))
         response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
