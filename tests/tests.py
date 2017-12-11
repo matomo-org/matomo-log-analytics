@@ -191,6 +191,7 @@ class Options(object):
     include_host = []
     exclude_older_than = None
     exclude_newer_than = None
+    track_http_method = True
 
 class Config(object):
     """Mock configuration."""
@@ -357,7 +358,7 @@ def check_iis_groups(groups):
 
     expected_hit_properties = ['date', 'path', 'query_string', 'ip', 'referrer', 'user_agent',
                                'status', 'length', 'host', 'userid', 'generation_time_milli',
-                               '__win32_status', 'cookie']
+                               '__win32_status', 'cookie', 'method']
 
     for property_name in groups.keys():
         assert property_name in expected_hit_properties
@@ -452,7 +453,7 @@ def test_iis_custom_format():
     assert hits[0]['extension'] == u'/products/theproduct'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == u'http://example.com/Search/SearchResults.pg?informationRecipient.languageCode.c=en'
-    assert hits[0]['args'] == {}
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 109
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/iis_custom.log'
@@ -471,7 +472,7 @@ def test_iis_custom_format():
     assert hits[1]['extension'] == u'/topic/hw43061'
     assert hits[1]['is_download'] == False
     assert hits[1]['referrer'] == ''
-    assert hits[1]['args'] == {}
+    assert hits[1]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['host'] == 'foo'
     assert hits[1]['filename'] == 'logs/iis_custom.log'
@@ -490,7 +491,7 @@ def test_iis_custom_format():
     assert hits[2]['extension'] == u'/hello/world/6,681965'
     assert hits[2]['is_download'] == False
     assert hits[2]['referrer'] == ''
-    assert hits[2]['args'] == {}
+    assert hits[2]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[2]['generation_time_milli'] == 359
     assert hits[2]['host'] == 'foo'
     assert hits[2]['filename'] == 'logs/iis_custom.log'
@@ -528,7 +529,7 @@ def test_netscaler_parsing():
     assert hits[0]['extension'] == u'jsp'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == ''
-    assert hits[0]['args'] == {}
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 1000
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/netscaler.log'
@@ -646,7 +647,7 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['extension'] == u'html'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == u'www.displaymyfiles.com'
-    assert hits[0]['args'] == {}
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 1.0
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/amazon_cloudfront_web.log'
@@ -822,7 +823,7 @@ def test_regex_group_to_custom_var_options():
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
     assert hits[0]['args']['_cvar'] == {1: ['The Date', '2012-04-01 00:00:13'], 2: ['User Name', 'theuser']} # check visit custom vars
-    assert hits[0]['args']['cvar'] == {1: ['Geneartion Time', '1687']} # check page custom vars
+    assert hits[0]['args']['cvar'] == {1: ['Geneartion Time', '1687'], 2: ['HTTP-method', 'GET']} # check page custom vars
 
     assert hits[0]['userid'] == 'theuser'
     assert hits[0]['date'] == datetime.datetime(2012, 4, 1, 0, 0, 13)
