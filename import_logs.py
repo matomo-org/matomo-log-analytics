@@ -833,7 +833,7 @@ class Configuration(object):
             '--accept-invalid-ssl-certificate',
             dest='accept_invalid_ssl_certificate', action='store_true',
             default=False,
-            help="Do not verify the SSL / TLS certificate when contacting the Piwik server."
+            help="Do not verify the SSL / TLS certificate when contacting the Piwik server. This is the default when running on Python 2.7.8 or older."
         )
         return option_parser
 
@@ -1380,14 +1380,17 @@ class Piwik(object):
 
         # Use non-default SSL context if invalid certificates shall be
         # accepted.
-        if config.options.accept_invalid_ssl_certificate:
+        if config.options.accept_invalid_ssl_certificate and \
+                sys.version_info >= (2, 7, 9):
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
+            https_handler_args = {'context': ssl_context}
         else:
-            ssl_context = None
-        opener = urllib2.build_opener(Piwik.RedirectHandlerWithLogging(),
-                                      urllib2.HTTPSHandler(context=ssl_context))
+            https_handler_args = {}
+        opener = urllib2.build_opener(
+            Piwik.RedirectHandlerWithLogging(),
+            urllib2.HTTPSHandler(**https_handler_args))
         response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
