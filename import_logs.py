@@ -965,13 +965,6 @@ class Configuration(object):
             self.options.piwik_api_url = 'http://' + self.options.piwik_api_url
         logging.debug('Piwik Analytics API URL is: %s', self.options.piwik_api_url)
 
-        if not self.options.piwik_token_auth:
-            try:
-                self.options.piwik_token_auth = self._get_token_auth()
-            except Piwik.Error as e:
-                fatal_error(e)
-        logging.debug('Authentication token token_auth is: %s', self.options.piwik_token_auth)
-
         if self.options.recorders < 1:
             self.options.recorders = 1
 
@@ -1081,6 +1074,15 @@ class Configuration(object):
         else:
             logging.debug('Resolver: dynamic')
             return DynamicResolver()
+
+    def init_token_auth(self):
+        if not self.options.piwik_token_auth:
+            try:
+                self.options.piwik_token_auth = self._get_token_auth()
+            except Piwik.Error as e:
+                fatal_error(e)
+        logging.debug('Authentication token token_auth is: %s', self.options.piwik_token_auth)
+
 
 class Statistics(object):
     """
@@ -2524,8 +2526,13 @@ def fatal_error(error, filename=None, lineno=None):
 
 if __name__ == '__main__':
     try:
-        piwik = Piwik()
         config = Configuration()
+        # The piwik object depends on the config object, so we have to create
+        # it after creating the configuration.
+        piwik = Piwik()
+        # The init_token_auth method may need the piwik option, so we must call
+        # it after creating the piwik object.
+        config.init_token_auth()
         stats = Statistics()
         resolver = config.get_resolver()
         parser = Parser()
