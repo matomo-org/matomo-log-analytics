@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 # vim: et sw=4 ts=4:
 # -*- coding: utf-8 -*-
 #
