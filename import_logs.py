@@ -15,34 +15,34 @@
 
 import sys
 
-if sys.version_info[0] != 2:
+if sys.version_info[0] == 2:
     print('The log importer currently does not work with Python 3 (or higher)')
     print('Please use Python 2.6 or 2.7')
     sys.exit(1)
 
 import base64
 import bz2
-import ConfigParser
+import configparser
 import datetime
 import fnmatch
 import gzip
 import hashlib
-import httplib
+import http.client
 import inspect
 import itertools
 import logging
 import optparse
 import os
 import os.path
-import Queue
+import queue
 import re
 import ssl
 import sys
 import threading
 import time
-import urllib
-import urllib2
-import urlparse
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
 import subprocess
 import functools
 import traceback
@@ -56,7 +56,7 @@ except ImportError:
         import simplejson as json
     except ImportError:
         if sys.version_info < (2, 6):
-            print >> sys.stderr, 'simplejson (http://pypi.python.org/pypi/simplejson/) is required.'
+            print('simplejson (http://pypi.python.org/pypi/simplejson/) is required.', file=sys.stderr)
             sys.exit(1)
 
 
@@ -306,12 +306,12 @@ class W3cExtendedFormat(RegexFormat):
         if config.options.w3c_time_taken_in_millisecs:
             expected_fields['time-taken'] = '(?P<generation_time_milli>[\d.]+)'
 
-        for mapped_field_name, field_name in config.options.custom_w3c_fields.iteritems():
+        for mapped_field_name, field_name in config.options.custom_w3c_fields.items():
             expected_fields[mapped_field_name] = expected_fields[field_name]
             del expected_fields[field_name]
 
         # add custom field regexes supplied through --w3c-field-regex option
-        for field_name, field_regex in config.options.w3c_field_regexes.iteritems():
+        for field_name, field_regex in config.options.w3c_field_regexes.items():
             expected_fields[field_name] = field_regex
 
         # Skip the 'Fields: ' prefix.
@@ -372,7 +372,7 @@ class ShoutcastFormat(W3cExtendedFormat):
     def get(self, key):
         if key == 'user_agent':
             user_agent = super(ShoutcastFormat, self).get(key)
-            return urllib2.unquote(user_agent)
+            return urllib.parse.unquote(user_agent)
         else:
             return super(ShoutcastFormat, self).get(key)
 
@@ -404,7 +404,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
             return '200'
         elif key == 'user_agent':
             user_agent = super(AmazonCloudFrontFormat, self).get(key)
-            return urllib2.unquote(user_agent)
+            return urllib.parse.unquote(user_agent)
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
@@ -650,7 +650,7 @@ class Configuration(object):
             '--log-format-name', dest='log_format_name', default=None,
             help=("Access log format to detect (supported are: %s). "
                   "When not specified, the log format will be autodetected by trying all supported log formats."
-                  % ', '.join(sorted(FORMATS.iterkeys())))
+                  % ', '.join(sorted(FORMATS.keys())))
         )
         available_regex_groups = ['date', 'path', 'query_string', 'ip', 'user_agent', 'referrer', 'status',
                                   'length', 'host', 'userid', 'generation_time_milli', 'event_action',
@@ -736,7 +736,7 @@ class Configuration(object):
                  "as, eg, --w3c-map-field my-date=date. Recognized default fields include: %s\n\n"
                  "Formats that extend the W3C extended log format (like the cloudfront RTMP log format) may define more "
                  "fields that can be mapped."
-                     % (', '.join(W3cExtendedFormat.fields.keys()))
+                     % (', '.join(list(W3cExtendedFormat.fields.keys())))
         )
         option_parser.add_option(
             '--w3c-time-taken-millisecs', action='store_true', default=False, dest='w3c_time_taken_in_millisecs',
@@ -887,7 +887,7 @@ class Configuration(object):
             sys.stdout = sys.stderr = open(self.options.output, 'a+', 0)
 
         if not self.filenames:
-            print(option_parser.format_help())
+            print((option_parser.format_help()))
             sys.exit(1)
 
         # Configure logging before calling logging.{debug,info}.
@@ -931,7 +931,7 @@ class Configuration(object):
             self.options.custom_w3c_fields = {}
         elif self.format is not None:
             # validate custom field mappings
-            for custom_name, default_name in self.options.custom_w3c_fields.iteritems():
+            for custom_name, default_name in self.options.custom_w3c_fields.items():
                 if default_name not in type(format).fields:
                     fatal_error("custom W3C field mapping error: don't know how to parse and use the '%' field" % default_name)
                     return
@@ -946,7 +946,7 @@ class Configuration(object):
             self.options.w3c_field_regexes = {}
         else:
             # make sure each custom w3c field regex has a named group
-            for field_name, field_regex in self.options.w3c_field_regexes.iteritems():
+            for field_name, field_regex in self.options.w3c_field_regexes.items():
                 if '(?P<' not in field_regex:
                     fatal_error("cannot find named group in custom w3c field regex '%s' for field '%s'" % (field_regex, field_name))
                     return
@@ -1001,7 +1001,7 @@ class Configuration(object):
                     _token_auth='',
                     _url=self.options.piwik_api_url,
                 )
-            except urllib2.URLError as e:
+            except urllib.error.URLError as e:
                 fatal_error('error when fetching token_auth from the API: %s' % e)
 
             try:
@@ -1020,7 +1020,7 @@ class Configuration(object):
                 'No credentials specified, reading them from "%s"',
                 self.options.config_file,
             )
-            config_file = ConfigParser.RawConfigParser()
+            config_file = configparser.RawConfigParser()
             success = len(config_file.read(self.options.config_file)) > 0
             if not success:
                 fatal_error(
@@ -1050,7 +1050,7 @@ class Configuration(object):
             if self.options.enable_testmode:
                 command.append('--testmode')
 
-            hostname = urlparse.urlparse( self.options.piwik_url ).hostname
+            hostname = urllib.parse.urlparse( self.options.piwik_url ).hostname
             command.append('--piwik-domain=' + hostname )
 
             command = subprocess.list2cmdline(command)
@@ -1102,7 +1102,7 @@ class Statistics(object):
             self.value = 0
 
         def increment(self):
-            self.value = self.counter.next()
+            self.value = next(self.counter)
 
         def advance(self, n):
             for i in range(n):
@@ -1174,7 +1174,7 @@ class Statistics(object):
         line (as a string). One level of indentation is 4 spaces.
         """
         prefix = ' ' * (4 * level)
-        if isinstance(lines, basestring):
+        if isinstance(lines, str):
             return prefix + lines
         else:
             return '\n'.join(
@@ -1194,7 +1194,7 @@ The following lines were not tracked by Piwik, either due to a malformed tracker
 
 ''' % textwrap.fill(", ".join(self.invalid_lines), 80)
 
-        print('''
+        print(('''
 %(invalid_lines)sLogs import summary
 -------------------
 
@@ -1288,7 +1288,7 @@ Processing your log data
         )),
     'url': config.options.piwik_api_url,
     'invalid_lines': invalid_lines_summary
-})
+}))
 
     ##
     ## The monitor is a thread that prints a short summary each second.
@@ -1299,12 +1299,12 @@ Processing your log data
         while not self.monitor_stop:
             current_total = stats.count_lines_recorded.value
             time_elapsed = time.time() - self.time_start
-            print('%d lines parsed, %d lines recorded, %d records/sec (avg), %d records/sec (current)' % (
+            print(('%d lines parsed, %d lines recorded, %d records/sec (avg), %d records/sec (current)' % (
                 stats.count_lines_parsed.value,
                 current_total,
                 current_total / time_elapsed if time_elapsed != 0 else 0,
                 (current_total - latest_total_recorded) / config.options.show_progress_delay,
-            ))
+            )))
             latest_total_recorded = current_total
             time.sleep(config.options.show_progress_delay)
 
@@ -1328,7 +1328,7 @@ class Piwik(object):
 
             self.code = code
 
-    class RedirectHandlerWithLogging(urllib2.HTTPRedirectHandler):
+    class RedirectHandlerWithLogging(urllib.request.HTTPRedirectHandler):
         """
         Special implementation of HTTPRedirectHandler that logs redirects in debug mode
         to help users debug system issues.
@@ -1337,7 +1337,7 @@ class Piwik(object):
         def redirect_request(self, req, fp, code, msg, hdrs, newurl):
             logging.debug("Request redirected (code: %s) to '%s'" % (code, newurl))
 
-            return urllib2.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, hdrs, newurl)
+            return urllib.request.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, hdrs, newurl)
 
     @staticmethod
     def _call(path, args, headers=None, url=None, data=None):
@@ -1352,12 +1352,12 @@ class Piwik(object):
         if data is None:
             # If Content-Type isn't defined, PHP do not parse the request's body.
             headers['Content-type'] = 'application/x-www-form-urlencoded'
-            data = urllib.urlencode(args)
-        elif not isinstance(data, basestring) and headers['Content-type'] == 'application/json':
+            data = urllib.parse.urlencode(args)
+        elif not isinstance(data, str) and headers['Content-type'] == 'application/json':
             data = json.dumps(data)
 
             if args:
-                path = path + '?' + urllib.urlencode(args)
+                path = path + '?' + urllib.parse.urlencode(args)
 
         headers['User-Agent'] = 'Piwik/LogImport'
 
@@ -1366,7 +1366,7 @@ class Piwik(object):
         except:
             timeout = None # the config global object may not be created at this point
 
-        request = urllib2.Request(url + path, data, headers)
+        request = urllib.request.Request(url + path, data, headers)
 
         # Handle basic auth if auth_user set
         try:
@@ -1390,9 +1390,9 @@ class Piwik(object):
             https_handler_args = {'context': ssl_context}
         else:
             https_handler_args = {}
-        opener = urllib2.build_opener(
+        opener = urllib.request.build_opener(
             Piwik.RedirectHandlerWithLogging(),
-            urllib2.HTTPSHandler(**https_handler_args))
+            urllib.request.HTTPSHandler(**https_handler_args))
         response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
@@ -1430,7 +1430,7 @@ class Piwik(object):
         # Warning: we have to pass the parameters in order: foo[0], foo[1], foo[2]
         # and not foo[1], foo[0], foo[2] (it will break Piwik otherwise.)
         final_args = []
-        for key, value in args.iteritems():
+        for key, value in args.items():
             if isinstance(value, (list, tuple)):
                 for index, obj in enumerate(value):
                     final_args.append(('%s[%d]' % (key, index), obj))
@@ -1447,7 +1447,7 @@ class Piwik(object):
         try:
             return json.loads(res)
         except ValueError:
-            raise urllib2.URLError('Piwik returned an invalid response: ' + res)
+            raise urllib.error.URLError('Piwik returned an invalid response: ' + res)
 
     @staticmethod
     def _call_wrapper(func, expected_response, on_failure, *args, **kwargs):
@@ -1464,17 +1464,17 @@ class Piwik(object):
                     else:
                         error_message = "didn't receive the expected response. Response was %s " % response
 
-                    raise urllib2.URLError(error_message)
+                    raise urllib.error.URLError(error_message)
                 return response
-            except (urllib2.URLError, httplib.HTTPException, ValueError, socket.timeout) as e:
+            except (urllib.error.URLError, http.client.HTTPException, ValueError, socket.timeout) as e:
                 logging.info('Error when connecting to Piwik: %s', e)
 
                 code = None
-                if isinstance(e, urllib2.HTTPError):
+                if isinstance(e, urllib.error.HTTPError):
                     # See Python issue 13211.
                     message = 'HTTP Error %s %s' % (e.code, e.msg)
                     code = e.code
-                elif isinstance(e, urllib2.URLError):
+                elif isinstance(e, urllib.error.URLError):
                     message = e.reason
                 else:
                     message = str(e)
@@ -1669,7 +1669,7 @@ class Recorder(object):
     recorders = []
 
     def __init__(self):
-        self.queue = Queue.Queue(maxsize=2)
+        self.queue = queue.Queue(maxsize=2)
 
         # if bulk tracking disabled, make sure we can store hits outside of the Queue
         if not config.options.use_bulk_tracking:
@@ -1680,7 +1680,7 @@ class Recorder(object):
         """
         Launch a bunch of Recorder objects in a separate thread.
         """
-        for i in xrange(recorder_count):
+        for i in range(recorder_count):
             recorder = Recorder()
             cls.recorders.append(recorder)
 
@@ -1826,10 +1826,10 @@ class Recorder(object):
             args['action_name'] = '%s%sURL = %s%s' % (
                 hit.status,
                 config.options.title_category_delimiter,
-                urllib.quote(args['url'], ''),
+                urllib.parse.quote(args['url'], ''),
                 ("%sFrom = %s" % (
                     config.options.title_category_delimiter,
-                    urllib.quote(args['urlref'], '')
+                    urllib.parse.quote(args['urlref'], '')
                 ) if args['urlref'] != ''  else '')
             )
 
@@ -1847,17 +1847,17 @@ class Recorder(object):
             args['bw_bytes'] = hit.length
 
         # convert custom variable args to JSON
-        if 'cvar' in args and not isinstance(args['cvar'], basestring):
+        if 'cvar' in args and not isinstance(args['cvar'], str):
             args['cvar'] = json.dumps(args['cvar'])
 
-        if '_cvar' in args and not isinstance(args['_cvar'], basestring):
+        if '_cvar' in args and not isinstance(args['_cvar'], str):
             args['_cvar'] = json.dumps(args['_cvar'])
 
         return args
 
     def _get_host_with_protocol(self, host, main_url):
         if '://' not in host:
-            parts = urlparse.urlparse(main_url)
+            parts = urllib.parse.urlparse(main_url)
             host = parts.scheme + '://' + host
         return host
 
@@ -1951,7 +1951,7 @@ class Hit(object):
     It's a simple container.
     """
     def __init__(self, **kwargs):
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             setattr(self, key, value)
         super(Hit, self).__init__()
 
@@ -1985,7 +1985,7 @@ class Hit(object):
         if api_arg_name not in self.args:
             self.args[api_arg_name] = {}
 
-        if isinstance(self.args[api_arg_name], basestring):
+        if isinstance(self.args[api_arg_name], str):
             logging.debug("Ignoring custom %s variable addition [ %s = %s ], custom var already set to string." % (api_arg_name, key, value))
             return
 
@@ -2093,7 +2093,7 @@ class Parser(object):
     def check_format(lineOrFile):
         format = False
         format_groups = 0
-        for name, candidate_format in FORMATS.iteritems():
+        for name, candidate_format in FORMATS.items():
             logging.debug("Check format %s", name)
 
             # skip auto detection for formats that can't be detected automatically
@@ -2102,7 +2102,7 @@ class Parser(object):
 
             match = None
             try:
-                if isinstance(lineOrFile, basestring):
+                if isinstance(lineOrFile, str):
                     match = candidate_format.check_format_line(lineOrFile)
                 else:
                     match = candidate_format.check_format(lineOrFile)
@@ -2180,7 +2180,7 @@ class Parser(object):
             host = hit.host
         else:
             try:
-                host = urlparse.urlparse(hit.path).hostname
+                host = urllib.parse.urlparse(hit.path).hostname
             except:
                 pass
 
@@ -2218,7 +2218,7 @@ class Parser(object):
             file = sys.stdin
         else:
             if not os.path.exists(filename):
-                print >> sys.stderr, "\n=====> Warning: File %s does not exist <=====" % filename
+                print("\n=====> Warning: File %s does not exist <=====" % filename, file=sys.stderr)
                 return
             else:
                 if filename.endswith('.bz2'):
@@ -2230,7 +2230,7 @@ class Parser(object):
                 file = open_func(filename, 'r')
 
         if config.options.show_progress:
-            print('Parsing log %s...' % filename)
+            print(('Parsing log %s...' % filename))
 
         if config.format:
             # The format was explicitely specified.
@@ -2449,13 +2449,13 @@ class Parser(object):
                     invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php')
                     continue
 
-                query_arguments = urlparse.parse_qs(hit.query_string)
+                query_arguments = urllib.parse.parse_qs(hit.query_string)
                 if not "idsite" in query_arguments:
                     invalid_line(line, 'missing idsite')
                     continue
 
                 try:
-                    hit.args.update((k, v.pop().encode('raw_unicode_escape').decode(config.options.encoding)) for k, v in query_arguments.iteritems())
+                    hit.args.update((k, v.pop().encode('raw_unicode_escape').decode(config.options.encoding)) for k, v in query_arguments.items())
                 except UnicodeDecodeError:
                     invalid_line(line, 'invalid encoding')
                     continue
@@ -2476,7 +2476,7 @@ class Parser(object):
             Recorder.add_hits(hits)
 
     def _add_custom_vars_from_regex_groups(self, hit, format, groups, is_page_var):
-        for group_name, custom_var_name in groups.iteritems():
+        for group_name, custom_var_name in groups.items():
             if group_name in format.get_all():
                 value = format.get(group_name)
 
@@ -2516,12 +2516,12 @@ def main():
     stats.print_summary()
 
 def fatal_error(error, filename=None, lineno=None):
-    print >> sys.stderr, 'Fatal error: %s' % error
+    print('Fatal error: %s' % error, file=sys.stderr)
     if filename and lineno is not None:
-        print >> sys.stderr, (
+        print((
             'You can restart the import of "%s" from the point it failed by '
             'specifying --skip=%d on the command line.\n' % (filename, lineno)
-        )
+        ), file=sys.stderr)
     os._exit(1)
 
 if __name__ == '__main__':
