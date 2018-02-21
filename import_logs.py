@@ -14,6 +14,7 @@
 #
 
 import sys
+from pprint import pprint
 
 if sys.version_info[0] == 2:
     print('The log importer currently does not work with Python 3 (or higher)')
@@ -991,7 +992,7 @@ class Configuration(object):
 
         if self.options.login and self.options.password:
             piwik_login = self.options.login
-            piwik_password = hashlib.md5(self.options.password).hexdigest()
+            piwik_password = hashlib.md5(self.options.password.encode('utf-8')).hexdigest()
 
             logging.debug('Using credentials: (login = %s, password = %s)', piwik_login, piwik_password)
             try:
@@ -1366,7 +1367,7 @@ class Piwik(object):
         except:
             timeout = None # the config global object may not be created at this point
 
-        request = urllib.request.Request(url + path, data, headers)
+        request = urllib.request.Request(url + path, data.encode("utf-8"), headers)
 
         # Handle basic auth if auth_user set
         try:
@@ -1797,13 +1798,13 @@ class Recorder(object):
         args = {
             'rec': '1',
             'apiv': '1',
-            'url': url.encode('utf8'),
-            'urlref': hit.referrer[:1024].encode('utf8'),
+            'url': url,
+            'urlref': hit.referrer[:1024],
             'cip': hit.ip,
             'cdt': self.date_to_piwik(hit.date),
             'idsite': site_id,
             'dp': '0' if config.options.reverse_dns else '1',
-            'ua': hit.user_agent.encode('utf8')
+            'ua': hit.user_agent
         }
 
         if config.options.replay_tracking:
@@ -2280,12 +2281,6 @@ class Parser(object):
             line = file.readline()
             if not line: break
             lineno = lineno + 1
-
-            try:
-                line = line.decode(config.options.encoding)
-            except UnicodeDecodeError:
-                invalid_line(line, 'invalid encoding')
-                continue
 
             stats.count_lines_parsed.increment()
             if stats.count_lines_parsed.value <= config.options.skip:
