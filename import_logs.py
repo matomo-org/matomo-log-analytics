@@ -828,7 +828,13 @@ class Configuration(object):
             '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
             help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
-
+        option_parser.add_option(
+            '--add-to-date', dest='seconds_to_add_to_date', default=0, type='int',
+            help="A number of seconds to add to each date value in the log file."
+        )
+        option_parser.add_option(
+            '--request-suffix', dest='request_suffix', default=None, type='string', help="Extra parameters to append to tracker and API requests."
+        )
         option_parser.add_option(
             '--accept-invalid-ssl-certificate',
             dest='accept_invalid_ssl_certificate', action='store_true',
@@ -1358,6 +1364,9 @@ class Matomo(object):
 
             if args:
                 path = path + '?' + urllib.urlencode(args)
+
+        if config.options.request_suffix:
+            path = path + ('&' if '?' in path else '?') + config.options.request_suffix
 
         headers['User-Agent'] = 'Matomo/LogImport'
 
@@ -2427,6 +2436,7 @@ class Parser(object):
             date_string = format.get('date')
             try:
                 hit.date = datetime.datetime.strptime(date_string, format.date_format)
+                hit.date += datetime.timedelta(seconds = config.options.seconds_to_add_to_date)
             except ValueError as e:
                 invalid_line(line, 'invalid date or invalid format: %s' % str(e))
                 continue

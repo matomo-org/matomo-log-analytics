@@ -192,6 +192,8 @@ class Options(object):
     exclude_older_than = None
     exclude_newer_than = None
     track_http_method = True
+    seconds_to_add_to_date = 0
+    request_suffix = None
 
 class Config(object):
     """Mock configuration."""
