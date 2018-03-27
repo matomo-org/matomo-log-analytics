@@ -833,7 +833,7 @@ class Configuration(object):
             help="A number of seconds to add to each date value in the log file."
         )
         option_parser.add_option(
-            '--tracker-request-suffix', dest='tracker_request_suffix', default=None, type='string', help="Extra parameters to append to tracker requests."
+            '--request-suffix', dest='request_suffix', default=None, type='string', help="Extra parameters to append to tracker and API requests."
         )
         option_parser.add_option(
             '--accept-invalid-ssl-certificate',
@@ -1365,8 +1365,8 @@ class Matomo(object):
             if args:
                 path = path + '?' + urllib.urlencode(args)
 
-        if config.options.tracker_request_suffix:
-            path = path + ('&' if '?' in path else '?') + config.options.tracker_request_suffix
+        if config.options.request_suffix:
+            path = path + ('&' if '?' in path else '?') + config.options.request_suffix
 
         headers['User-Agent'] = 'Matomo/LogImport'
 
