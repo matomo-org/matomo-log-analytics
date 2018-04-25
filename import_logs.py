@@ -1930,20 +1930,6 @@ class Recorder(object):
             result.append(d[str(i)])
         return result
 
-    def _add_custom_vars_from_regex_groups(self, hit, format, groups, is_page_var):
-        for group_name, custom_var_name in groups.iteritems():
-            if group_name in format.get_all():
-                value = format.get(group_name)
-
-                # don't track the '-' empty placeholder value
-                if value == '-':
-                    continue
-
-                if is_page_var:
-                    hit.add_page_custom_var(custom_var_name, value)
-                else:
-                    hit.add_visit_custom_var(custom_var_name, value)
-
     def _get_host_with_protocol(self, host, main_url):
         if '://' not in host:
             parts = urlparse.urlparse(main_url)
@@ -2564,6 +2550,20 @@ class Parser(object):
         # add last chunk of hits
         if len(hits) > 0:
             Recorder.add_hits(hits)
+
+    def _add_custom_vars_from_regex_groups(self, hit, format, groups, is_page_var):
+        for group_name, custom_var_name in groups.iteritems():
+            if group_name in format.get_all():
+                value = format.get(group_name)
+
+                # don't track the '-' empty placeholder value
+                if value == '-':
+                    continue
+
+                if is_page_var:
+                    hit.add_page_custom_var(custom_var_name, value)
+                else:
+                    hit.add_visit_custom_var(custom_var_name, value)
 
 def main():
     """
