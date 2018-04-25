@@ -1675,6 +1675,8 @@ class Recorder(object):
     the API.
     """
 
+    PHP_ARRAY_QUERY_PARAM_REGEX = re.compile('^(.*?)((?:\[.*?\])+)$')
+
     recorders = []
 
     def __init__(self):
@@ -1862,7 +1864,41 @@ class Recorder(object):
         if '_cvar' in args and not isinstance(args['_cvar'], basestring):
             args['_cvar'] = json.dumps(args['_cvar'])
 
-        return args
+        return self._convert_array_args(args)
+
+    def _convert_array_args(self, args):
+        # parse array arguments which do not exist outside of php
+        final_args = {}
+        for key, value in args.iteritems():
+              m = Recorder.PHP_ARRAY_QUERY_PARAM_REGEX.match(key)
+              if m:
+                  name = m.group(1)
+                  indices = m.group(2)
+
+                  indices = indices.split('][')
+                  indices[0] = indices[0].lstrip('[')
+                  indices[-1] = indices[-1].rstrip(']')
+                  indices.insert(0, name)
+
+                  element = final_args
+                  for i in range(0, len(indices) - 1):
+                      idx = indices[i]
+                      if not indices[i + 1]:
+                          if name not in element or not isinstance(element[idx], list):
+                              element[idx] = []
+                      else:
+                          if name not in element or not isinstance(element[idx], dict):
+                              element[idx] = {}
+
+                      element = element[idx]
+
+                  if not indices[-1]:
+                      element.append(value)
+                  else:
+                      element[indices[-1]] = value
+              else:
+                  final_args[key] = value
+        return final_args
 
     def _get_host_with_protocol(self, host, main_url):
         if '://' not in host:
