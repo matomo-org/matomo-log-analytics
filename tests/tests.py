@@ -3,6 +3,7 @@ import functools
 import os
 import datetime
 import re
+import json
 
 import import_logs
 
@@ -891,3 +892,34 @@ def test_custom_log_date_format_option():
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
     assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 16, 42, 7)
+
+# UrlHelper tests
+def test_urlhelper_convert_array_args():
+    def _test(input, expected):
+        actual = import_logs.UrlHelper.convert_array_args(input)
+        assert json.dumps(actual) == json.dumps(expected)
+
+    f = functools.partial(_test, {'abc': 'def', 'ghi': 23}, {'abc': 'def', 'ghi': 23})
+    f.description = 'without array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[]': 'def', 'ghi': 23}, {'abc[]': 'def', 'ghi': 23})
+    f.description = 'with normal array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1]': 'def', 'ghi[0]': 23, 'abc[key2]': 'val2', 'abc[key3][key4]': 'val3'},
+        {'abc': {'key1': 'def', 'key2': 'val2', 'key3': {'key4': 'val3'}}, 'ghi': [23]})
+    f.description = 'with associative array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[0]': 1, 'abc[2]': 2, 'abc[1]': 3, 'ghi[0]': 4, 'ghi[2]': 5}, {'abc': [1, 3, 2], 'ghi': {'0': 4, '2': 5}})
+    f.description = 'with array index keys'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1][0]': 'def', 'abc[key1][1]': 'ghi', 'abc[key2][4]': 'hij'}, {'abc': {'key1': ['def', 'ghi'], 'key2': {4: 'hij'}}})
+    f.description = 'with both associative & normal arrays'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
+    f.description = 'with multiple data strucutres'
+    yield f

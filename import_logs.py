@@ -1322,6 +1322,84 @@ Processing your log data
     def stop_monitor(self):
         self.monitor_stop = True
 
+class UrlHelper(object):
+
+    PHP_ARRAY_QUERY_PARAM_REGEX = re.compile('^(.*?)((?:\[.+\])+)$')
+
+    @staticmethod
+    def convert_array_args(args):
+        """
+        Converts PHP deep query param arrays (eg, w/ names like hsr_ev[abc][0][]=value) into a nested list/dict
+        structure that will convert correctly to JSON.
+        """
+
+        final_args = {}
+        for key, value in args.iteritems():
+            m = UrlHelper.PHP_ARRAY_QUERY_PARAM_REGEX.match(key)
+            if m:
+                name = m.group(1)
+                indices = m.group(2)
+
+                # contains list of all indices, eg for abc[def][ghi][] = 123, indices would be ['abc', 'def', 'ghi', '']
+                indices = indices.split('][')
+                indices[0] = indices[0].lstrip('[')
+                indices[-1] = indices[-1].rstrip(']')
+                indices.insert(0, name)
+
+                # navigate the multidimensional array final_args, creating lists/dicts when needed, using indices
+                element = final_args
+                for i in range(0, len(indices) - 1):
+                    idx = indices[i]
+
+                    # if there's no next key, then this element is a list, otherwise a dict
+                    if not indices[i + 1]:
+                        if idx not in element or not isinstance(element[idx], list):
+                            element[idx] = []
+                    else:
+                        if idx not in element or not isinstance(element[idx], dict):
+                            element[idx] = {}
+
+                    element = element[idx]
+
+                # set the value in the final container we navigated to
+                if not indices[-1]: # last indice is '[]'
+                    element.append(value)
+                else: # last indice has a key, eg, '[abc]'
+                    element[indices[-1]] = value
+            else:
+                final_args[key] = value
+
+        return UrlHelper._convert_dicts_to_arrays(final_args)
+
+    @staticmethod
+    def _convert_dicts_to_arrays(d):
+        # convert dicts that have contiguous integer keys to arrays
+        for key, value in d.iteritems():
+            if not isinstance(value, dict):
+                continue
+
+            if UrlHelper._has_contiguous_int_keys(value):
+                d[key] = UrlHelper._convert_dict_to_array(value)
+            else:
+                d[key] = UrlHelper._convert_dicts_to_arrays(value)
+
+        return d
+
+    @staticmethod
+    def _has_contiguous_int_keys(d):
+        for i in range(0, len(d)):
+            if str(i) not in d:
+                return False
+        return True
+
+    @staticmethod
+    def _convert_dict_to_array(d):
+        result = []
+        for i in range(0, len(d)):
+            result.append(d[str(i)])
+        return result
+
+
 class Matomo(object):
     """
     Make requests to Matomo.
@@ -1675,8 +1753,6 @@ class Recorder(object):
     the API.
     """
 
-    PHP_ARRAY_QUERY_PARAM_REGEX = re.compile('^(.*?)((?:\[.*?\])+)$')
-
     recorders = []
 
     def __init__(self):
@@ -1864,71 +1940,7 @@ class Recorder(object):
         if '_cvar' in args and not isinstance(args['_cvar'], basestring):
             args['_cvar'] = json.dumps(args['_cvar'])
 
-        return self._convert_array_args(args)
-
-    def _convert_array_args(self, args):
-        final_args = {}
-        for key, value in args.iteritems():
-            m = Recorder.PHP_ARRAY_QUERY_PARAM_REGEX.match(key)
-            if m:
-                name = m.group(1)
-                indices = m.group(2)
-
-                # contains list of all indices, eg for abc[def][ghi][] = 123, indices would be ['abc', 'def', 'ghi', '']
-                indices = indices.split('][')
-                indices[0] = indices[0].lstrip('[')
-                indices[-1] = indices[-1].rstrip(']')
-                indices.insert(0, name)
-
-                # navigate the multidimensional array final_args, creating lists/dicts when needed, using indices
-                element = final_args
-                for i in range(0, len(indices) - 1):
-                    idx = indices[i]
-
-                    # if there's no next key, then this element is a list, otherwise a dict
-                    if not indices[i + 1]:
-                        if idx not in element or not isinstance(element[idx], list):
-                            element[idx] = []
-                    else:
-                        if idx not in element or not isinstance(element[idx], dict):
-                            element[idx] = {}
-
-                    element = element[idx]
-
-                # set the value in the final container we navigated to
-                if not indices[-1]: # last indice is '[]'
-                    element.append(value)
-                else: # last indice has a key, eg, '[abc]'
-                    element[indices[-1]] = value
-            else:
-                final_args[key] = value
-
-        return self._convert_dicts_to_arrays(final_args)
-
-    def _convert_dicts_to_arrays(self, d):
-        # convert dicts that have contiguous integer keys to arrays
-        for key, value in d.iteritems():
-            if not isinstance(value, dict):
-                continue
-
-            if self._has_contiguous_int_keys(value):
-                d[key] = self._convert_dict_to_array(value)
-            else:
-                d[key] = self._convert_dicts_to_arrays(value)
-
-        return d
-
-    def _has_contiguous_int_keys(self, d):
-        for i in range(0, len(d)):
-            if str(i) not in d:
-                return False
-        return True
-
-    def _convert_dict_to_array(self, d):
-        result = []
-        for i in range(0, len(d)):
-            result.append(d[str(i)])
-        return result
+        return UrlHelper.convert_array_args(args)
 
     def _get_host_with_protocol(self, host, main_url):
         if '://' not in host:
