@@ -903,7 +903,7 @@ def test_urlhelper_convert_array_args():
     f.description = 'without array args'
     yield f
 
-    f = functools.partial(_test, {'abc[]': 'def', 'ghi': 23}, {'abc[]': 'def', 'ghi': 23})
+    f = functools.partial(_test, {'abc[]': 'def', 'ghi': 23}, {'abc': ['def'], 'ghi': 23})
     f.description = 'with normal array args'
     yield f
 
@@ -921,5 +921,5 @@ def test_urlhelper_convert_array_args():
     yield f
 
     f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
-    f.description = 'with multiple data strucutres'
+    f.description = 'with multiple inconsistent data strucutres'
     yield f

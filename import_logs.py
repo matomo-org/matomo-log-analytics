@@ -1324,8 +1324,6 @@ Processing your log data
 
 class UrlHelper(object):
 
-    PHP_ARRAY_QUERY_PARAM_REGEX = re.compile('^(.*?)((?:\[.+\])+)$')
-
     @staticmethod
     def convert_array_args(args):
         """
@@ -1335,16 +1333,10 @@ class UrlHelper(object):
 
         final_args = {}
         for key, value in args.iteritems():
-            m = UrlHelper.PHP_ARRAY_QUERY_PARAM_REGEX.match(key)
-            if m:
-                name = m.group(1)
-                indices = m.group(2)
-
+            indices = key.split('[')
+            if '[' in key:
                 # contains list of all indices, eg for abc[def][ghi][] = 123, indices would be ['abc', 'def', 'ghi', '']
-                indices = indices.split('][')
-                indices[0] = indices[0].lstrip('[')
-                indices[-1] = indices[-1].rstrip(']')
-                indices.insert(0, name)
+                indices = [i.rstrip(']') for i in indices]
 
                 # navigate the multidimensional array final_args, creating lists/dicts when needed, using indices
                 element = final_args
@@ -1352,12 +1344,9 @@ class UrlHelper(object):
                     idx = indices[i]
 
                     # if there's no next key, then this element is a list, otherwise a dict
-                    if not indices[i + 1]:
-                        if idx not in element or not isinstance(element[idx], list):
-                            element[idx] = []
-                    else:
-                        if idx not in element or not isinstance(element[idx], dict):
-                            element[idx] = {}
+                    element_type = list if not indices[i + 1] else dict
+                    if idx not in element or not isinstance(element[idx], element_type):
+                        element[idx] = element_type()
 
                     element = element[idx]
 
