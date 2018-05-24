@@ -1322,6 +1322,73 @@ Processing your log data
     def stop_monitor(self):
         self.monitor_stop = True
 
+class UrlHelper(object):
+
+    @staticmethod
+    def convert_array_args(args):
+        """
+        Converts PHP deep query param arrays (eg, w/ names like hsr_ev[abc][0][]=value) into a nested list/dict
+        structure that will convert correctly to JSON.
+        """
+
+        final_args = {}
+        for key, value in args.iteritems():
+            indices = key.split('[')
+            if '[' in key:
+                # contains list of all indices, eg for abc[def][ghi][] = 123, indices would be ['abc', 'def', 'ghi', '']
+                indices = [i.rstrip(']') for i in indices]
+
+                # navigate the multidimensional array final_args, creating lists/dicts when needed, using indices
+                element = final_args
+                for i in range(0, len(indices) - 1):
+                    idx = indices[i]
+
+                    # if there's no next key, then this element is a list, otherwise a dict
+                    element_type = list if not indices[i + 1] else dict
+                    if idx not in element or not isinstance(element[idx], element_type):
+                        element[idx] = element_type()
+
+                    element = element[idx]
+
+                # set the value in the final container we navigated to
+                if not indices[-1]: # last indice is '[]'
+                    element.append(value)
+                else: # last indice has a key, eg, '[abc]'
+                    element[indices[-1]] = value
+            else:
+                final_args[key] = value
+
+        return UrlHelper._convert_dicts_to_arrays(final_args)
+
+    @staticmethod
+    def _convert_dicts_to_arrays(d):
+        # convert dicts that have contiguous integer keys to arrays
+        for key, value in d.iteritems():
+            if not isinstance(value, dict):
+                continue
+
+            if UrlHelper._has_contiguous_int_keys(value):
+                d[key] = UrlHelper._convert_dict_to_array(value)
+            else:
+                d[key] = UrlHelper._convert_dicts_to_arrays(value)
+
+        return d
+
+    @staticmethod
+    def _has_contiguous_int_keys(d):
+        for i in range(0, len(d)):
+            if str(i) not in d:
+                return False
+        return True
+
+    @staticmethod
+    def _convert_dict_to_array(d):
+        result = []
+        for i in range(0, len(d)):
+            result.append(d[str(i)])
+        return result
+
+
 class Matomo(object):
     """
     Make requests to Matomo.
@@ -1862,7 +1929,7 @@ class Recorder(object):
         if '_cvar' in args and not isinstance(args['_cvar'], basestring):
             args['_cvar'] = json.dumps(args['_cvar'])
 
-        return args
+        return UrlHelper.convert_array_args(args)
 
     def _get_host_with_protocol(self, host, main_url):
         if '://' not in host:
