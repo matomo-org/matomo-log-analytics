@@ -177,6 +177,8 @@ class Options(object):
         self.w3c_field_regexes = {}
         self.regex_group_to_visit_cvars_map = {}
         self.regex_group_to_page_cvars_map = {}
+        self.regex_group_to_visit_cdims_map = {}
+        self.regex_group_to_action_cdims_map = {}
         self.regex_groups_to_ignore = None
         self.replay_tracking_expected_tracker_file = 'piwik.php'
         self.debug_request_limit = None
@@ -200,6 +202,9 @@ class Resolver(object):
     def check_format(self, format_):
         pass
 
+    def resolve(self, hit):
+        return 1, "https://example.org/"
+
 class Recorder(object):
     """Mock recorder which collects hits but doesn't put their in database."""
     recorders = []
@@ -207,6 +212,16 @@ class Recorder(object):
     @classmethod
     def add_hits(cls, hits):
         cls.recorders.extend(hits)
+
+import_logs.custom_dimensions = import_logs.CustomDimensions()
+import_logs.custom_dimensions.dimensions[1] = {
+    ('visit', 'User Name'): 1,
+    ('visit', 'The Date'): 2,
+    ('action', 'Generation Time'): 3,
+    ('action', 'The Referrer'): 4,
+    ('action', 'HTTP-method'): 5
+}
+
 
 def test_replay_tracking_seconds_to_add_to_date():
     """Test data parsing from sample log file."""
@@ -478,7 +493,7 @@ def test_iis_custom_format():
     assert hits[0]['extension'] == '/products/theproduct'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == 'http://example.com/Search/SearchResults.pg?informationRecipient.languageCode.c=en'
-    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[0]['args'] == {'dimension5': 'GET'}
     assert hits[0]['generation_time_milli'] == 109
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/iis_custom.log'
@@ -497,7 +512,7 @@ def test_iis_custom_format():
     assert hits[1]['extension'] == '/topic/hw43061'
     assert hits[1]['is_download'] == False
     assert hits[1]['referrer'] == ''
-    assert hits[1]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[1]['args'] == {'dimension5': 'GET'}
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['host'] == 'foo'
     assert hits[1]['filename'] == 'logs/iis_custom.log'
@@ -516,7 +531,7 @@ def test_iis_custom_format():
     assert hits[2]['extension'] == '/hello/world/6,681965'
     assert hits[2]['is_download'] == False
     assert hits[2]['referrer'] == ''
-    assert hits[2]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[2]['args'] == {'dimension5': 'GET'}
     assert hits[2]['generation_time_milli'] == 359
     assert hits[2]['host'] == 'foo'
     assert hits[2]['filename'] == 'logs/iis_custom.log'
@@ -554,7 +569,7 @@ def test_netscaler_parsing():
     assert hits[0]['extension'] == 'jsp'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == ''
-    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[0]['args'] == {'dimension5': 'GET'}
     assert hits[0]['generation_time_milli'] == 1000
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/netscaler.log'
@@ -752,7 +767,7 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['extension'] == 'html'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == 'https://example.com/'
-    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[0]['args'] == {'dimension5': 'GET'}
     assert hits[0]['generation_time_milli'] == 1.0
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/amazon_cloudfront_web.log'
@@ -836,7 +851,7 @@ def test_incapsulaw3c_parsing():
     assert hits[0]['extension'] == 'php'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == u''
-    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[0]['args'] == {'dimension5': '"GET"'}
     assert hits[0]['length'] == 10117
     assert hits[0]['generation_time_milli'] == 0
     assert hits[0]['host'] == 'www.example.com'
@@ -857,7 +872,7 @@ def test_incapsulaw3c_parsing():
     assert hits[1]['extension'] == '/rss/news'
     assert hits[1]['is_download'] == False
     assert hits[1]['referrer'] == u''
-    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[0]['args'] == {'dimension5': '"GET"'}
     assert hits[1]['length'] == 0
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['host'] == 'www.example.com'
@@ -982,8 +997,8 @@ def test_ignore_groups_option_removes_groups():
     assert hits[0]['userid'] == None
     assert hits[0]['generation_time_milli'] == 0
 
-def test_regex_group_to_custom_var_options():
-    """Test that the --regex-group-to-visit-cvar and --regex-group-to-page-cvar track regex groups to custom vars."""
+def test_regex_group_to_custom_dimensions_options():
+    """Test that the --regex-group-to-visit-cdim and --regex-group-to-action-cdim track regex groups to custom vars."""
 
     file_ = 'logs/iis.log'
 
@@ -997,11 +1012,11 @@ def test_regex_group_to_custom_var_options():
     import_logs.config.options.replay_tracking = False
     import_logs.config.options.w3c_time_taken_in_millisecs = True
     import_logs.config.options.regex_groups_to_ignore = set()
-    import_logs.config.options.regex_group_to_visit_cvars_map = {
+    import_logs.config.options.regex_group_to_visit_cdims_map = {
         'userid': "User Name",
         'date': "The Date"
     }
-    import_logs.config.options.regex_group_to_page_cvars_map = {
+    import_logs.config.options.regex_group_to_action_cdims_map = {
         'generation_time_milli': 'Generation Time',
         'referrer': 'The Referrer'
     }
@@ -1009,10 +1024,10 @@ def test_regex_group_to_custom_var_options():
 
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
-    assert ['The Date', '2012-04-01 00:00:13'] in hits[0]['args']['_cvar'].values()
-    assert ['User Name', 'theuser'] in hits[0]['args']['_cvar'].values()
-    assert ['Generation Time', '1687'] in hits[0]['args']['cvar'].values()
-    assert ['HTTP-method', 'GET'] in hits[0]['args']['cvar'].values()
+    assert hits[0]['args']['dimension1'] == 'theuser'
+    assert hits[0]['args']['dimension2'] == '2012-04-01 00:00:13'
+    assert hits[0]['args']['dimension3'] == '1687'
+    assert hits[0]['args']['dimension5'] == 'GET'
 
     assert hits[0]['userid'] == 'theuser'
     assert hits[0]['date'] == datetime.datetime(2012, 4, 1, 0, 0, 13)
@@ -1063,8 +1078,8 @@ def test_custom_log_date_format_option():
     Recorder.recorders = []
     import_logs.parser = import_logs.Parser()
     import_logs.config.options.w3c_field_regexes = None
-    import_logs.config.options.regex_group_to_visit_cvars_map = None
-    import_logs.config.options.regex_group_to_page_cvars_map = None
+    import_logs.config.options.regex_group_to_visit_cdims_map = None
+    import_logs.config.options.regex_group_to_action_cdims_map = None
     import_logs.config.options.log_format_regex = (
         r'(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<date>.*?)\]\s+'
         r'"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
