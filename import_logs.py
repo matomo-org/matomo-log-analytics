@@ -753,10 +753,10 @@ class Configuration(object):
         option_parser.add_option(
             '--w3c-field-regex', action='callback', callback=functools.partial(self._set_option_map, 'w3c_field_regexes'), type='string',
             help="Specify a regex for a field in your W3C extended log file. You can use this option to parse fields the "
-                 "importer does not natively recognize and then use one of the --regex-group-to-XXX-cvar options to track "
-                 "the field in a custom variable. For example, specifying --w3c-field-regex=sc-win32-status=(?P<win32_status>\\S+) "
-                 "--regex-group-to-page-cvar=\"win32_status=Windows Status Code\" will track the sc-win32-status IIS field "
-                 "in the 'Windows Status Code' custom variable. Regexes must contain a named group."
+                 "importer does not natively recognize and then use one of the --regex-group-to-XXX-cdim options to track "
+                 "the field in a custom dimension. For example, specifying --w3c-field-regex=sc-win32-status=(?P<win32_status>\\S+) "
+                 "--regex-group-to-page-cdim=\"win32_status=Windows Status Code\" will track the sc-win32-status IIS field "
+                 "in the 'Windows Status Code' custom dimension. Regexes must contain a named group."
         )
         option_parser.add_option(
             '--title-category-delimiter', dest='title_category_delimiter', default='/',
@@ -777,22 +777,29 @@ class Configuration(object):
                  "disable normal user id tracking. See documentation for --log-format-regex for list of available "
                  "regex groups."
         )
-
         option_parser.add_option(
             '--regex-group-to-visit-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_visit_cvars_map'), type='string',
-            help="Track an attribute through a custom variable with visit scope instead of through Matomo's normal "
-                 "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
-                 "parameter, supply --regex-group-to-visit-cvar=\"userid=User Name\". This will track usernames in a "
-                 "custom variable named 'User Name'. The list of available regex groups can be found in the documentation "
+            help="DEPRECATED"
+        )
+        option_parser.add_option(
+            '--regex-group-to-page-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_page_cvars_map'), type='string',
+            help="DEPRECATED"
+        )
+        option_parser.add_option(
+            '--regex-group-to-visit-cdim', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_visit_cdims_map'), type='string',
+            help="Track an attribute through a custom dimension with visit scope instead of through Matomo's normal "
+                 "approach. For example, to track usernames as a custom dimension instead of through the uid tracking "
+                 "parameter, supply --regex-group-to-visit-cdim=\"userid=User Name\". This will track usernames in a "
+                 "custom dimension named 'User Name'. The list of available regex groups can be found in the documentation "
                  "for --log-format-regex (additional regex groups you may have defined "
                  "in --log-format-regex can also be used)."
         )
         option_parser.add_option(
-            '--regex-group-to-page-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_page_cvars_map'), type='string',
-            help="Track an attribute through a custom variable with page scope instead of through Matomo's normal "
-                 "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
-                 "parameter, supply --regex-group-to-page-cvar=\"userid=User Name\". This will track usernames in a "
-                 "custom variable named 'User Name'. The list of available regex groups can be found in the documentation "
+            '--regex-group-to-action-cdim', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_action_cdims_map'), type='string',
+            help="Track an attribute through a custom dimension with action scope instead of through Matomo's normal "
+                 "approach. For example, to track usernames as a custom dimension instead of through the uid tracking "
+                 "parameter, supply --regex-group-to-action-cdim=\"userid=User Name\". This will track usernames in a "
+                 "custom dimension named 'User Name'. The list of available regex groups can be found in the documentation "
                  "for --log-format-regex (additional regex groups you may have defined "
                  "in --log-format-regex can also be used)."
         )
@@ -947,6 +954,12 @@ class Configuration(object):
 
         if not hasattr(self.options, 'regex_group_to_page_cvars_map'):
             self.options.regex_group_to_page_cvars_map = {}
+
+        if not hasattr(self.options, 'regex_group_to_visit_cdims_map'):
+            self.options.regex_group_to_visit_cdims_map = {}
+
+        if not hasattr(self.options, 'regex_group_to_action_cdims_map'):
+            self.options.regex_group_to_action_cdims_map = {}
 
         if not hasattr(self.options, 'w3c_field_regexes'):
             self.options.w3c_field_regexes = {}
@@ -1454,7 +1467,7 @@ class Matomo(object):
 
         if auth_user is not None:
             base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
-            request.add_header("Authorization", "Basic %s" % base64string)        
+            request.add_header("Authorization", "Basic %s" % base64string)
 
         # Use non-default SSL context if invalid certificates shall be
         # accepted.
@@ -1736,6 +1749,49 @@ class DynamicResolver(object):
                 "specify the Matomo site ID with the --idsite argument"
             )
 
+
+class CustomDimensions(object):
+    """
+    Utility to manage custom dimensions.
+    """
+    dimensions = {}
+
+    def __init__(self):
+        self.lock = threading.RLock()
+
+    def pull_dimensions(self, site_id):
+        self.lock.acquire()
+        try:
+            dimensions = matomo.call_api('CustomDimensions.getConfiguredCustomDimensions', idSite=site_id)
+            for dimension in dimensions:
+                if dimension['active']:
+                    self.dimensions.setdefault(int(site_id), {})[(dimension['scope'], dimension['name'])] = int(dimension['idcustomdimension'])
+        finally:
+            self.lock.release()
+
+    def create_new_dimension(self, site_id, scope, name):
+        self.lock.acquire()
+        try:
+            return matomo.call_api('CustomDimensions.configureNewCustomDimension', idSite=site_id, scope=scope, name=name, active=1)
+        finally:
+            self.lock.release()
+
+    def get_custom_dimension_id(self, site_id, scope, name):
+        if self.dimensions.get(int(site_id)) is None:
+            self.pull_dimensions(site_id)
+        dimension_id = self.dimensions.get(int(site_id), {}).get((scope, name))
+
+        if dimension_id:
+            return dimension_id
+        self.lock.acquire()
+        try:
+            dimension_id = self.create_new_dimension(site_id, scope, name)['value']
+            self.pull_dimensions(site_id)
+            return dimension_id
+        finally:
+            self.lock.release()
+
+
 class Recorder(object):
     """
     A Recorder fetches hits from the Queue and inserts them into Matomo using
@@ -1864,11 +1920,11 @@ class Recorder(object):
         # handle custom variables before generating args dict
         if config.options.enable_bots:
             if hit.is_robot:
-                hit.add_visit_custom_var("Bot", hit.user_agent)
+                hit.add_visit_custom_dimension(site_id, "Bot", hit.user_agent)
             else:
-                hit.add_visit_custom_var("Not-Bot", hit.user_agent)
+                hit.add_visit_custom_dimension(site_id, "Not-Bot", hit.user_agent)
 
-        hit.add_page_custom_var("HTTP-code", hit.status)
+        hit.add_action_custom_dimension(site_id, "HTTP-code", hit.status)
 
         args = {
             'rec': '1',
@@ -1885,11 +1941,11 @@ class Recorder(object):
         if config.options.replay_tracking:
             # prevent request to be force recorded when option replay-tracking
             args['rec'] = '0'
-            
+
         # idsite is already determined by resolver
         if 'idsite' in hit.args:
             del hit.args['idsite']
-            
+
         args.update(hit.args)
 
         if hit.is_download:
@@ -1975,7 +2031,7 @@ class Recorder(object):
                         logging.info("tracker response:\n%s" % response)
 
                     response = {}
-                
+
                 if ('invalid_indices' in response and isinstance(response['invalid_indices'], list) and
                     response['invalid_indices']):
                     invalid_count = len(response['invalid_indices'])
@@ -2044,6 +2100,22 @@ class Hit(object):
                     break
 
         return abs(hash(visitor_id))
+
+    def add_action_custom_dimension(self, site_id, key, value):
+        """
+        Adds a page custom dimension to this Hit.
+        """
+        self._add_custom_dimension(site_id, key, value, 'action')
+
+    def add_visit_custom_dimension(self, site_id, key, value):
+        """
+        Adds a visit custom dimension to this Hit.
+        """
+        self._add_custom_dimension(site_id, key, value, 'visit')
+
+    def _add_custom_dimension(self, site_id, key, value, scope):
+        dimension_id = custom_dimensions.get_custom_dimension_id(site_id, scope, key)
+        self.args['dimension%s' % dimension_id] = value
 
     def add_page_custom_var(self, key, value):
         """
@@ -2391,22 +2463,15 @@ class Parser(object):
                 args={},
             )
 
+            if config.options.regex_groups_to_ignore:
+                format.remove_ignored_groups(config.options.regex_groups_to_ignore)
+
+            # FIXME: custom variables are deprecated...
             if config.options.regex_group_to_page_cvars_map:
                 self._add_custom_vars_from_regex_groups(hit, format, config.options.regex_group_to_page_cvars_map, True)
 
             if config.options.regex_group_to_visit_cvars_map:
                 self._add_custom_vars_from_regex_groups(hit, format, config.options.regex_group_to_visit_cvars_map, False)
-
-            if config.options.regex_groups_to_ignore:
-                format.remove_ignored_groups(config.options.regex_groups_to_ignore)
-
-            # Add http method page cvar
-            try:
-                httpmethod = format.get('method')
-                if config.options.track_http_method and httpmethod != '-':
-                    hit.add_page_custom_var('HTTP-method', httpmethod)
-            except:
-                pass
 
             try:
                 hit.query_string = format.get('query_string')
@@ -2520,6 +2585,22 @@ class Parser(object):
             if timezone:
                 hit.date -= datetime.timedelta(hours=timezone/100)
 
+            site_id, main_url = resolver.resolve(hit)
+
+            if config.options.regex_group_to_action_cdims_map:
+                self._add_custom_dimension_from_regex_groups(site_id, hit, format, config.options.regex_group_to_action_cdims_map, 'action')
+
+            if config.options.regex_group_to_visit_cdims_map:
+                self._add_custom_dimension_from_regex_groups(site_id, hit, format, config.options.regex_group_to_visit_cdims_map, 'visit')
+
+            # Add http method page custom dimension
+            try:
+                httpmethod = format.get('method')
+                if config.options.track_http_method and httpmethod != '-':
+                    hit.add_action_custom_dimension(site_id, 'HTTP-method', httpmethod)
+            except:
+                pass
+
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
                 if not hit.query_string or not hit.path.lower().endswith(config.options.replay_tracking_expected_tracker_file):
@@ -2565,6 +2646,21 @@ class Parser(object):
                     hit.add_page_custom_var(custom_var_name, value)
                 else:
                     hit.add_visit_custom_var(custom_var_name, value)
+
+    def _add_custom_dimension_from_regex_groups(self, site_id, hit, format, groups, scope):
+        for group_name, custom_dim_name in groups.iteritems():
+            if group_name in format.get_all():
+                value = format.get(group_name)
+
+                # don't track the '-' empty placeholder value
+                if value == '-':
+                    continue
+
+                if scope == 'action':
+                    hit.add_action_custom_dimension(site_id, custom_dim_name, value)
+                else:
+                    hit.add_visit_custom_dimension(site_id, custom_dim_name, value)
+
 
 def main():
     """
@@ -2613,6 +2709,7 @@ if __name__ == '__main__':
         stats = Statistics()
         resolver = config.get_resolver()
         parser = Parser()
+        custom_dimensions = CustomDimensions()
         main()
         sys.exit(0)
     except KeyboardInterrupt:
