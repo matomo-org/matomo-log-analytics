@@ -1057,7 +1057,7 @@ class Configuration(object):
                 command.append('--testmode')
 
             hostname = urlparse.urlparse( self.options.matomo_url ).hostname
-            command.append('--piwik-domain=' + hostname )
+            command.append('--matomo-domain=' + hostname )
 
             command = subprocess.list2cmdline(command)
 
