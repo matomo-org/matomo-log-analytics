@@ -7,7 +7,7 @@ Import your server logs in Matomo with this powerful and easy to use tool.
 * Python 2.6 or 2.7. Python 3.x is not supported.
 * Matomo >= 2.14.0
 
-Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=master)](https://travis-ci.org/matomo/matomo-log-analytics)
+Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=master)](https://travis-ci.org/matomo-org/matomo-log-analytics)
 
 ## Supported log formats
 
