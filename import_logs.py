@@ -230,19 +230,19 @@ class W3cExtendedFormat(RegexFormat):
     FIELDS_LINE_PREFIX = '#Fields: '
 
     fields = {
-        'date': '(?P<date>\d+[-\d+]+',
-        'time': '[\d+:]+)[.\d]*?', # TODO should not assume date & time will be together not sure how to fix ATM.
-        'cs-uri-stem': '(?P<path>/\S*)',
-        'cs-uri-query': '(?P<query_string>\S*)',
-        'c-ip': '"?(?P<ip>[\w*.:-]*)"?',
-        'cs(User-Agent)': '(?P<user_agent>".*?"|\S*)',
-        'cs(Referer)': '(?P<referrer>\S+)',
-        'sc-status': '(?P<status>\d+)',
-        'sc-bytes': '(?P<length>\S+)',
-        'cs-host': '(?P<host>\S+)',
-        'cs-method': '(?P<method>\S+)',
-        'cs-username': '(?P<userid>\S+)',
-        'time-taken': '(?P<generation_time_secs>[.\d]+)'
+        'date': r'(?P<date>\d+[-\d+]+',
+        'time': r'[\d+:]+)[.\d]*?', # TODO should not assume date & time will be together not sure how to fix ATM.
+        'cs-uri-stem': r'(?P<path>/\S*)',
+        'cs-uri-query': r'(?P<query_string>\S*)',
+        'c-ip': r'"?(?P<ip>[\w*.:-]*)"?',
+        'cs(User-Agent)': r'(?P<user_agent>".*?"|\S*)',
+        'cs(Referer)': r'(?P<referrer>\S+)',
+        'sc-status': r'(?P<status>\d+)',
+        'sc-bytes': r'(?P<length>\S+)',
+        'cs-host': r'(?P<host>\S+)',
+        'cs-method': r'(?P<method>\S+)',
+        'cs-username': r'(?P<userid>\S+)',
+        'time-taken': r'(?P<generation_time_secs>[.\d]+)'
     }
 
     def __init__(self):
@@ -304,7 +304,7 @@ class W3cExtendedFormat(RegexFormat):
 
         # if the --w3c-time-taken-millisecs option is used, make sure the time-taken field is interpreted as milliseconds
         if config.options.w3c_time_taken_in_millisecs:
-            expected_fields['time-taken'] = '(?P<generation_time_milli>[\d.]+)'
+            expected_fields['time-taken'] = r'(?P<generation_time_milli>[\d.]+)'
 
         for mapped_field_name, field_name in config.options.custom_w3c_fields.iteritems():
             expected_fields[mapped_field_name] = expected_fields[field_name]
@@ -316,13 +316,13 @@ class W3cExtendedFormat(RegexFormat):
 
         # Skip the 'Fields: ' prefix.
         fields_line = fields_line[9:].strip()
-        for field in re.split('\s+', fields_line):
+        for field in re.split(r'\s+', fields_line):
             try:
                 regex = expected_fields[field]
             except KeyError:
-                regex = '(?:".*?"|\S+)'
+                regex = r'(?:".*?"|\S+)'
             full_regex.append(regex)
-        full_regex = '\s+'.join(full_regex)
+        full_regex = r'\s+'.join(full_regex)
 
         logging.debug("Based on 'Fields:' line, computed regex to be %s", full_regex)
 
@@ -344,8 +344,8 @@ class IisFormat(W3cExtendedFormat):
 
     fields = W3cExtendedFormat.fields.copy()
     fields.update({
-        'time-taken': '(?P<generation_time_milli>[.\d]+)',
-        'sc-win32-status': '(?P<__win32_status>\S+)' # this group is useless for log importing, but capturing it
+        'time-taken': r'(?P<generation_time_milli>[.\d]+)',
+        'sc-win32-status': r'(?P<__win32_status>\S+)' # this group is useless for log importing, but capturing it
                                                      # will ensure we always select IIS for the format instead of
                                                      # W3C logs when detecting the format. This way there will be
                                                      # less accidental importing of IIS logs w/o --w3c-time-taken-milli.
@@ -360,8 +360,8 @@ class ShoutcastFormat(W3cExtendedFormat):
 
     fields = W3cExtendedFormat.fields.copy()
     fields.update({
-        'c-status': '(?P<status>\d+)',
-        'x-duration': '(?P<generation_time_secs>[.\d]+)'
+        'c-status': r'(?P<status>\d+)',
+        'x-duration': r'(?P<generation_time_secs>[.\d]+)'
     })
 
     def __init__(self):
@@ -380,16 +380,16 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
 
     fields = W3cExtendedFormat.fields.copy()
     fields.update({
-        'x-event': '(?P<event_action>\S+)',
-        'x-sname': '(?P<event_name>\S+)',
-        'cs-uri-stem': '(?:rtmp:/)?(?P<path>/\S*)',
-        'c-user-agent': '(?P<user_agent>".*?"|\S+)',
+        'x-event': r'(?P<event_action>\S+)',
+        'x-sname': r'(?P<event_name>\S+)',
+        'cs-uri-stem': r'(?:rtmp:/)?(?P<path>/\S*)',
+        'c-user-agent': r'(?P<user_agent>".*?"|\S+)',
 
         # following are present to match cloudfront instead of W3C when we know it's cloudfront
-        'x-edge-location': '(?P<x_edge_location>".*?"|\S+)',
-        'x-edge-result-type': '(?P<x_edge_result_type>".*?"|\S+)',
-        'x-edge-request-id': '(?P<x_edge_request_id>".*?"|\S+)',
-        'x-host-header': '(?P<x_host_header>".*?"|\S+)'
+        'x-edge-location': r'(?P<x_edge_location>".*?"|\S+)',
+        'x-edge-result-type': r'(?P<x_edge_result_type>".*?"|\S+)',
+        'x-edge-request-id': r'(?P<x_edge_request_id>".*?"|\S+)',
+        'x-host-header': r'(?P<x_host_header>".*?"|\S+)'
     })
 
     def __init__(self):
@@ -408,33 +408,33 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
-_HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)?\s+'
+_HOST_PREFIX = r'(?P<host>[\w\-\.]*)(?::\d+)?\s+'
 
 _COMMON_LOG_FORMAT = (
-    '(?P<ip>[\w*.:-]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
-    '"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+(?P<length>\S+)'
+    r'(?P<ip>[\w*.:-]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
+    r'"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+(?P<length>\S+)'
 )
 _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
-    '\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
+    r'\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _S3_LOG_FORMAT = (
-    '\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>[\w*.:-]+)\s+'
-    '(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
-    '\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
+    r'\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>[\w*.:-]+)\s+'
+    r'(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
+    r'\S+\s+\S+\s+\S+\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
-    '\s+(?P<session_time>[0-9-]+)'
+    r'\s+(?P<session_time>[0-9-]+)'
 )
 _ELB_LOG_FORMAT = (
-    '(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
-    '(?P<status>\d+)\s+\S+\s+\S+\s+(?P<length>\S+)\s+'
-    '"\S+\s+\w+:\/\/(?P<host>[\w\-\.]*):\d+(?P<path>\/\S*)\s+[^"]+"\s+"(?P<user_agent>[^"]+)"\s+\S+\s+\S+'
+    r'(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
+    r'(?P<status>\d+)\s+\S+\s+\S+\s+(?P<length>\S+)\s+'
+    r'"\S+\s+\w+:\/\/(?P<host>[\w\-\.]*):\d+(?P<path>\/\S*)\s+[^"]+"\s+"(?P<user_agent>[^"]+)"\s+\S+\s+\S+'
 )
 
 _OVH_FORMAT = (
-    '(?P<ip>\S+)\s+' + _HOST_PREFIX + '(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
-    '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
-    '\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
+    r'(?P<ip>\S+)\s+' + _HOST_PREFIX + r'(?P<userid>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+'
+    r'"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
+    r'\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 
 FORMATS = {
@@ -937,9 +937,9 @@ class Configuration(object):
             self.options.custom_w3c_fields = {}
         elif self.format is not None:
             # validate custom field mappings
-            for custom_name, default_name in self.options.custom_w3c_fields.iteritems():
+            for dummy_custom_name, default_name in self.options.custom_w3c_fields.iteritems():
                 if default_name not in type(format).fields:
-                    fatal_error("custom W3C field mapping error: don't know how to parse and use the '%' field" % default_name)
+                    fatal_error("custom W3C field mapping error: don't know how to parse and use the '%s' field" % default_name)
                     return
 
         if not hasattr(self.options, 'regex_group_to_visit_cvars_map'):
@@ -1397,7 +1397,7 @@ class Matomo(object):
     class Error(Exception):
 
         def __init__(self, message, code = None):
-            super(Exception, self).__init__(message)
+            super(Error, self).__init__(message)
 
             self.code = code
 
@@ -2001,7 +2001,7 @@ class Recorder(object):
         try:
             json.loads(result)
             return True
-        except ValueError as e:
+        except ValueError:
             return False
 
     def _on_tracking_failure(self, response, data):
@@ -2182,7 +2182,7 @@ class Parser(object):
                     match = candidate_format.check_format_line(lineOrFile)
                 else:
                     match = candidate_format.check_format(lineOrFile)
-            except Exception as e:
+            except Exception:
                 logging.debug('Error in format checking: %s', traceback.format_exc())
                 pass
 
