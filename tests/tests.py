@@ -923,3 +923,15 @@ def test_urlhelper_convert_array_args():
     f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
     f.description = 'with multiple inconsistent data strucutres'
     yield f
+
+# Matomo error test
+def test_matomo_error_construct():
+    """Test that Matomo exception can be created."""
+
+    try:
+        raise import_logs.Matomo.Error('test message', 120)
+
+        assert false
+    except import_logs.Matomo.Error as e:
+        assert e.code == 120
+        assert e.message == 'test message'
