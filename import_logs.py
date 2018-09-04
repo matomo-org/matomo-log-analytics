@@ -1397,7 +1397,7 @@ class Matomo(object):
     class Error(Exception):
 
         def __init__(self, message, code = None):
-            super(Error, self).__init__(message)
+            super(Matomo.Error, self).__init__(message)
 
             self.code = code
 
