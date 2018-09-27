@@ -114,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy':
             continue
 
         f = functools.partial(_test, format_name)
@@ -398,6 +398,14 @@ def check_match_groups(format_name, groups):
 
 def check_ovh_groups(groups):
     check_common_complete_groups(groups)
+
+def check_haproxy_groups(groups):
+    assert groups['ip'] == '4.3.2.1'
+    assert groups['date'] == '25/Sep/2018:06:05:27.584'
+    assert groups['path'] == '/user/'
+    assert groups['status'] == '200'
+    assert groups['length'] == '7456'
+    assert groups['method'] == 'POST'
 
 # parsing tests
 def test_format_parsing():
