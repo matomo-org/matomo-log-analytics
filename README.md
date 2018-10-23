@@ -88,7 +88,7 @@ Your logs should be automatically rotated and stored on your webserver, for inst
 month and day).
 You can then import your logs automatically each day (at 0:01). Setup a cron job with the command:
 
-    0 1 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
+    1 0 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
 
 ## Using Basic access authentication
 
