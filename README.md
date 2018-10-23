@@ -40,11 +40,11 @@ We look forward to your contributions!
 
 ### Improve this guide
 
-This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request.
+This readme page could be improved and maybe you would like to help? Feel free to "edit" this page and create a pull request.
 
 ### Implement new features or fixes
 
-if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/matomo-org/matomo-log-analytics/issues) which lists all issues and suggestions.
+If you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/matomo-org/matomo-log-analytics/issues) which lists all issues and suggestions.
 
 ## How to use this script?
 
@@ -108,12 +108,12 @@ Apache configuration:
 
 cron job:
 ```
-5 0 * * * /var/www/html/matomo/misc/log-analytics/import_logs.py --url https://www.mysite.com/matomo --auth-user=someuser --auth-password=somepassword --exclude-path=*/matomo/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+5 0 * * * /var/www/html/matomo/misc/log-analytics/import_logs.py --url https://www.mysite.com/matomo --auth-user=someuser --auth-password=somepassword --exclude-path=*/matomo/index.php --enable-http-errors --enable-reverse-dns --idsite=1 `date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log` > /opt/scripts/import-logs.log
 ```
 
 Security tips:
 * Currently the credentials are not encrypted in the cron job. This should be a future enhancement.
-* Always use HTTPS with Basic access authentication to ensure you are not passing credentials clear text.
+* Always use HTTPS with Basic access authentication to ensure you are not passing credentials in clear text.
 
 ## Performance
 
@@ -125,8 +125,8 @@ Matomo server itself (i.e. PHP/MySQL) which will use more CPU during data import
 
 To improve performance,
 
-1. by default, the script one thread to parse and import log lines.
-   you can use the `--recorders` option to specify the number of parallel threads which will
+1. by default, the script uses one thread to parse and import log lines.
+   You can use the `--recorders` option to specify the number of parallel threads which will
    import hits into Matomo. We recommend to set `--recorders=N` to the number N of CPU cores
    that the server hosting Matomo has. The parsing will still be single-threaded,
    but several hits will be tracked in Matomo at the same time.
