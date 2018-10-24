@@ -649,7 +649,7 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['is_error'] == False
     assert hits[0]['extension'] == u'html'
     assert hits[0]['is_download'] == False
-    assert hits[0]['referrer'] == u'www.displaymyfiles.com'
+    assert hits[0]['referrer'] == u'https://example.com/'
     assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 1.0
     assert hits[0]['host'] == 'foo'
@@ -662,7 +662,7 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['path'] == u'/view/my/file.html'
     assert hits[0]['is_robot'] == False
     assert hits[0]['full_path'] == u'/view/my/file.html'
-    assert hits[0]['user_agent'] == u'Mozilla/4.0 (compatible; MSIE 5.0b1; Mac_PowerPC)'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows; U; Windows NT 6.1; de-DE) AppleWebKit/534.17 (KHTML, like Gecko) Chrome/10.0.649.0 Safari/534.17'
 
     assert len(hits) == 1
 
