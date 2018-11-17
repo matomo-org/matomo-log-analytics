@@ -1234,7 +1234,7 @@ The following lines were not tracked by Matomo, either due to a malformed tracke
         if config.options.exclude_newer_than:
             date_filtering_info += '    Excluded logs after: %s +0000\n' % config.options.exclude_newer_than
 
-        print('''
+        print(re.sub(r'\n\n\n+', '\n\n', '''
 %(invalid_lines)sLogs import summary
 -------------------
 
@@ -1331,7 +1331,7 @@ Processing your log data
     'url': config.options.matomo_api_url,
     'invalid_lines': invalid_lines_summary,
     'date_filtering_info': date_filtering_info
-})
+}))
 
     ##
     ## The monitor is a thread that prints a short summary each second.
