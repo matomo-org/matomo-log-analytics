@@ -199,6 +199,7 @@ class Options(object):
 class Config(object):
     """Mock configuration."""
     options = Options()
+    initial_timestamp = None
     format = import_logs.FORMATS['ncsa_extended']
 
 class Resolver(object):
