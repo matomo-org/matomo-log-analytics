@@ -769,6 +769,11 @@ class Configuration(object):
             "option to the same value in order to get a pretty page titles report."
         )
         option_parser.add_option(
+            '--page-titles-from', dest='page_titles_from', default=None,
+            help="Loads a mapping of URLs to page titles from a given file so that titles can be displayed "
+            "in the page titles report."
+        )
+        option_parser.add_option(
             '--dump-log-regex', dest='dump_log_regex', action='store_true', default=False,
             help="Prints out the regex string used to parse log lines and exists. Can be useful for using formats "
                  "in newer versions of the script in older versions of the script. The output regex can be used with "
@@ -926,6 +931,15 @@ class Configuration(object):
             logging.debug('Accepted hostnames: %s', ', '.join(self.options.hostnames))
         else:
             logging.debug('Accepted hostnames: all')
+
+        self.page_titles_map = {}
+
+        if self.options.page_titles_from:
+            for line in open(self.options.page_titles_from).readlines():
+                separator = line.index('=')
+                url = line[0:separator].strip()
+                title = line[separator+1:-1].strip()
+                self.page_titles_map[url] = title
 
         if self.options.log_format_regex:
             self.format = RegexFormat('custom', self.options.log_format_regex, self.options.log_date_format)
@@ -1912,6 +1926,10 @@ class Recorder(object):
                     urllib.quote(args['urlref'], '')
                 ) if args['urlref'] != ''  else '')
             )
+        else:
+            page_title = config.page_titles_map.get(args['url'])
+            if page_title:
+                args['action_name'] = page_title
 
         if hit.generation_time_milli > 0:
             args['gt_ms'] = int(hit.generation_time_milli)
