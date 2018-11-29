@@ -691,9 +691,9 @@ class Configuration(object):
             help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee https://matomo.org/faq/how-to/faq_17033/"
         )
         option_parser.add_option(
-            '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default='piwik.php',
-            help="The expected suffix for tracking request paths. Only logs whose paths end with this will be imported. Defaults "
-            "to 'piwik.php' so only requests to the piwik.php file will be imported."
+            '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default=None,
+            help="The expected suffix for tracking request paths. Only logs whose paths end with this will be imported. By default "
+            "requests to the piwik.php file or the matomo.php file will be imported."
         )
         option_parser.add_option(
             '--output', dest='output',
@@ -2522,7 +2522,7 @@ class Parser(object):
 
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
-                if not hit.query_string or not hit.path.lower().endswith(config.options.replay_tracking_expected_tracker_file):
+                if not hit.query_string or not self.is_hit_for_tracker(hit):
                     invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php')
                     continue
 
@@ -2551,6 +2551,17 @@ class Parser(object):
         # add last chunk of hits
         if len(hits) > 0:
             Recorder.add_hits(hits)
+
+    def is_hit_for_tracker(self, hit):
+        filesToCheck = ['piwik.php', 'matomo.php']
+        if config.options.replay_tracking_expected_tracker_file:
+            filesToCheck = [config.options.replay_tracking_expected_tracker_file]
+
+        lowerPath = hit.path.lower()
+        for file in filesToCheck:
+            if lowerPath.endswith(file):
+                return True
+        return False
 
     def _add_custom_vars_from_regex_groups(self, hit, format, groups, is_page_var):
         for group_name, custom_var_name in groups.iteritems():
