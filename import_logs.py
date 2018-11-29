@@ -519,6 +519,10 @@ class Configuration(object):
             "eg. http://other-example.com/matomo/ or http://analytics-api.example.net",
         )
         option_parser.add_option(
+            '--tracker-endpoint-path', dest='matomo_tracker_endpoint_path', default='/piwik.php',
+            help="The tracker endpoint path to use when tracking. Defaults to /piwik.php."
+        )
+        option_parser.add_option(
             '--dry-run', dest='dry_run',
             action='store_true', default=False,
             help="Perform a trial run with no tracking data being inserted into Matomo",
@@ -1454,7 +1458,7 @@ class Matomo(object):
 
         if auth_user is not None:
             base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
-            request.add_header("Authorization", "Basic %s" % base64string)        
+            request.add_header("Authorization", "Basic %s" % base64string)
 
         # Use non-default SSL context if invalid certificates shall be
         # accepted.
@@ -1953,7 +1957,7 @@ class Recorder(object):
                     args['debug'] = '1'
 
                 response = matomo.call(
-                    '/piwik.php', args=args,
+                    config.options.matomo_tracker_endpoint_path, args=args,
                     expected_content=None,
                     headers={'Content-type': 'application/json'},
                     data=data,
@@ -2523,7 +2527,7 @@ class Parser(object):
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
                 if not hit.query_string or not self.is_hit_for_tracker(hit):
-                    invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php')
+                    invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php/matomo.php')
                     continue
 
                 query_arguments = urlparse.parse_qs(hit.query_string)
