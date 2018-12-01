@@ -519,6 +519,10 @@ class Configuration(object):
             "eg. http://other-example.com/matomo/ or http://analytics-api.example.net",
         )
         option_parser.add_option(
+            '--tracker-endpoint-path', dest='matomo_tracker_endpoint_path', default='/piwik.php',
+            help="The tracker endpoint path to use when tracking. Defaults to /piwik.php."
+        )
+        option_parser.add_option(
             '--dry-run', dest='dry_run',
             action='store_true', default=False,
             help="Perform a trial run with no tracking data being inserted into Matomo",
@@ -691,9 +695,9 @@ class Configuration(object):
             help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee https://matomo.org/faq/how-to/faq_17033/"
         )
         option_parser.add_option(
-            '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default='piwik.php',
-            help="The expected suffix for tracking request paths. Only logs whose paths end with this will be imported. Defaults "
-            "to 'piwik.php' so only requests to the piwik.php file will be imported."
+            '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default=None,
+            help="The expected suffix for tracking request paths. Only logs whose paths end with this will be imported. By default "
+            "requests to the piwik.php file or the matomo.php file will be imported."
         )
         option_parser.add_option(
             '--output', dest='output',
@@ -1454,7 +1458,7 @@ class Matomo(object):
 
         if auth_user is not None:
             base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
-            request.add_header("Authorization", "Basic %s" % base64string)        
+            request.add_header("Authorization", "Basic %s" % base64string)
 
         # Use non-default SSL context if invalid certificates shall be
         # accepted.
@@ -1953,7 +1957,7 @@ class Recorder(object):
                     args['debug'] = '1'
 
                 response = matomo.call(
-                    '/piwik.php', args=args,
+                    config.options.matomo_tracker_endpoint_path, args=args,
                     expected_content=None,
                     headers={'Content-type': 'application/json'},
                     data=data,
@@ -2522,8 +2526,8 @@ class Parser(object):
 
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
-                if not hit.query_string or not hit.path.lower().endswith(config.options.replay_tracking_expected_tracker_file):
-                    invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php')
+                if not hit.query_string or not self.is_hit_for_tracker(hit):
+                    invalid_line(line, 'no query string, or ' + hit.path.lower() + ' does not end with piwik.php/matomo.php')
                     continue
 
                 query_arguments = urlparse.parse_qs(hit.query_string)
@@ -2551,6 +2555,17 @@ class Parser(object):
         # add last chunk of hits
         if len(hits) > 0:
             Recorder.add_hits(hits)
+
+    def is_hit_for_tracker(self, hit):
+        filesToCheck = ['piwik.php', 'matomo.php']
+        if config.options.replay_tracking_expected_tracker_file:
+            filesToCheck = [config.options.replay_tracking_expected_tracker_file]
+
+        lowerPath = hit.path.lower()
+        for file in filesToCheck:
+            if lowerPath.endswith(file):
+                return True
+        return False
 
     def _add_custom_vars_from_regex_groups(self, hit, format, groups, is_page_var):
         for group_name, custom_var_name in groups.iteritems():
