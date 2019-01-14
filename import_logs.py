@@ -2541,6 +2541,11 @@ class Parser(object):
                     invalid_line(line, 'invalid encoding')
                     continue
 
+                if config.options.seconds_to_add_to_date:
+                    for param in ['_idts', '_viewts', '_ects', '_refts']:
+                        if param in hit.args:
+                            hit.args[param] = int(hit.args[param]) + config.options.seconds_to_add_to_date
+
             (is_filtered, reason) = self.is_filtered(hit)
             if is_filtered:
                 filtered_line(line, reason)
