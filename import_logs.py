@@ -1927,7 +1927,8 @@ class Recorder(object):
                 ) if args['urlref'] != ''  else '')
             )
         else:
-            page_title = config.page_titles_map.get(args['url'])
+            url_without_query = re.sub(r'\?.*', '', args['url'])
+            page_title = config.page_titles_map.get(args['url']) or config.page_titles_map.get(url_without_query)
             if page_title:
                 args['action_name'] = page_title
 
