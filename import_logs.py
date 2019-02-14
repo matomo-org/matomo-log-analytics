@@ -2352,12 +2352,6 @@ class Parser(object):
             if not line: break
             lineno = lineno + 1
 
-            try:
-                line = line.decode(config.options.encoding)
-            except UnicodeDecodeError:
-                invalid_line(line, 'invalid encoding')
-                continue
-
             stats.count_lines_parsed.increment()
             if stats.count_lines_parsed.value <= config.options.skip:
                 continue
