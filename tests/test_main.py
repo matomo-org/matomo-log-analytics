@@ -818,15 +818,17 @@ def test_regex_group_to_custom_var_options():
         'date': "The Date"
     }
     import_logs.config.options.regex_group_to_page_cvars_map = {
-        'generation_time_milli': 'Geneartion Time',
+        'generation_time_milli': 'Generation Time',
         'referrer': 'The Referrer'
     }
     import_logs.parser.parse(file_)
 
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
-    assert hits[0]['args']['_cvar'] == {1: ['The Date', '2012-04-01 00:00:13'], 2: ['User Name', 'theuser']} # check visit custom vars
-    assert hits[0]['args']['cvar'] == {1: ['Geneartion Time', '1687'], 2: ['HTTP-method', 'GET']} # check page custom vars
+    assert ['The Date', '2012-04-01 00:00:13'] in hits[0]['args']['_cvar'].values()
+    assert ['User Name', 'theuser'] in hits[0]['args']['_cvar'].values()
+    assert ['Generation Time', '1687'] in hits[0]['args']['cvar'].values()
+    assert ['HTTP-method', 'GET'] in hits[0]['args']['cvar'].values()
 
     assert hits[0]['userid'] == 'theuser'
     assert hits[0]['date'] == datetime.datetime(2012, 4, 1, 0, 0, 13)
