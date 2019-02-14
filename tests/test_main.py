@@ -899,7 +899,7 @@ def test_custom_log_date_format_option():
 def test_urlhelper_convert_array_args():
     def _test(input, expected):
         actual = import_logs.UrlHelper.convert_array_args(input)
-        assert json.dumps(actual) == json.dumps(expected)
+        assert json.loads(json.dumps(actual)) == json.loads(json.dumps(expected))
 
     f = functools.partial(_test, {'abc': 'def', 'ghi': 23}, {'abc': 'def', 'ghi': 23})
     f.description = 'without array args'
