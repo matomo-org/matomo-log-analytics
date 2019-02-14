@@ -934,4 +934,4 @@ def test_matomo_error_construct():
         assert false
     except import_logs.Matomo.Error as e:
         assert e.code == 120
-        assert e.message == 'test message'
+        assert e.args[0] == 'test message'
