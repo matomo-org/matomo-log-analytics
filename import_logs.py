@@ -10,7 +10,7 @@
 #
 # For more info see: https://matomo.org/log-analytics/ and https://matomo.org/docs/log-analytics-tool-how-to/
 #
-# Requires Python 2.6 or 2.7
+# Requires Python 3.5, 3.6 or 3.7
 #
 from __future__ import print_function # this is needed that python2 can run the script until the warning below
 
