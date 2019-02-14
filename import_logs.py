@@ -31,6 +31,7 @@ import hashlib
 import http.client
 import inspect
 import itertools
+import json
 import logging
 import optparse
 import os
@@ -49,16 +50,6 @@ import functools
 import traceback
 import socket
 import textwrap
-
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        if sys.version_info < (2, 6):
-            print('simplejson (http://pypi.python.org/pypi/simplejson/) is required.', file=sys.stderr)
-            sys.exit(1)
 
 
 ##
