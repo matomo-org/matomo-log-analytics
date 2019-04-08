@@ -845,6 +845,10 @@ class Configuration(object):
             default=False,
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server. This is the default when running on Python 2.7.8 or older."
         )
+        option_parser.add_option(
+            '--php-binary', dest='php_binary', type='string', default='php',
+            help="Specify the PHP binary to use.",
+        )
         return option_parser
 
     def _set_date(self, option_attr_name, option, opt_str, value, parser):
@@ -1042,7 +1046,7 @@ class Configuration(object):
                     '../../misc/cron/updatetoken.php'),
             )
 
-            phpBinary = 'php'
+            phpBinary = config.options.php_binary
 
             is_windows = sys.platform.startswith('win')
             if is_windows:
