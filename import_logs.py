@@ -12,7 +12,7 @@
 #
 # Requires Python 3.5, 3.6 or 3.7
 #
-from __future__ import print_function # this is needed that python2 can run the script until the warning below
+from __future__ import print_function  # this is needed that python2 can run the script until the warning below
 
 import sys
 
@@ -33,7 +33,7 @@ import inspect
 import itertools
 import json
 import logging
-import optparse
+import argparse
 import os
 import os.path
 import queue
@@ -46,7 +46,6 @@ import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import urllib.parse
 import subprocess
-import functools
 import traceback
 import socket
 import textwrap
@@ -449,6 +448,16 @@ FORMATS = {
 ## Code.
 ##
 
+class StoreDictKeyPair(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        my_dict = getattr(namespace, self.dest, None)
+        if not my_dict:
+            my_dict = {}
+        for kv in values.split(","):
+            k,v = kv.split("=")
+            my_dict[k] = v
+        setattr(namespace, self.dest, my_dict)
+
 class Configuration(object):
     """
     Stores all the configuration options by reading sys.argv and parsing,
@@ -464,85 +473,87 @@ class Configuration(object):
         """
         Initialize and return the OptionParser instance.
         """
-        option_parser = optparse.OptionParser(
-            usage='Usage: %prog [options] log_file [ log_file [...] ]',
+        parser = argparse.ArgumentParser(
+            # usage='Usage: %prog [options] log_file [ log_file [...] ]',
             description="Import HTTP access logs to Matomo. "
                          "log_file is the path to a server access log file (uncompressed, .gz, .bz2, or specify - to read from stdin). "
                          " You may also import many log files at once (for example set log_file to *.log or *.log.gz)."
                          " By default, the script will try to produce clean reports and will exclude bots, static files, discard http error and redirects, etc. This is customizable, see below.",
             epilog="About Matomo Server Log Analytics: https://matomo.org/log-analytics/ "
-                   "              Found a bug? Please create a ticket in https://dev.matomo.org/ "
+                   "              Found a bug? Please create a ticket in https://github.com/matomo-org/matomo-log-analytics/ "
                    "              Please send your suggestions or successful user story to hello@matomo.org "
         )
 
+        parser.add_argument('file', type=str, nargs='+')
+
         # Basic auth user
-        option_parser.add_option(
+        parser.add_argument(
             '--auth-user', dest='auth_user',
             help="Basic auth user",
         )
         # Basic auth password
-        option_parser.add_option(
+        parser.add_argument(
             '--auth-password', dest='auth_password',
             help="Basic auth password",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--debug', '-d', dest='debug', action='count', default=0,
             help="Enable debug output (specify multiple times for more verbose)",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--debug-tracker', dest='debug_tracker', action='store_true', default=False,
             help="Appends &debug=1 to tracker requests and prints out the result so the tracker can be debugged. If "
             "using the log importer results in errors with the tracker or improperly recorded visits, this option can "
             "be used to find out what the tracker is doing wrong. To see debug tracker output, you must also set the "
             "[Tracker] debug_on_demand INI config to 1 in your Matomo's config.ini.php file."
         )
-        option_parser.add_option(
-            '--debug-request-limit', dest='debug_request_limit', type='int', default=None,
+        parser.add_argument(
+            '--debug-request-limit', dest='debug_request_limit', type=int, default=None,
             help="Debug option that will exit after N requests are parsed. Can be used w/ --debug-tracker to limit the "
             "output of a large log file."
         )
-        option_parser.add_option(
-            '--url', dest='matomo_url',
+        parser.add_argument(
+            '--url', dest='matomo_url', required=True,
             help="REQUIRED Your Matomo server URL, eg. https://example.com/matomo/ or https://analytics.example.net",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--api-url', dest='matomo_api_url',
             help="This URL will be used to send API requests (use it if your tracker URL differs from UI/API url), "
             "eg. https://other-example.com/matomo/ or https://analytics-api.example.net",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--tracker-endpoint-path', dest='matomo_tracker_endpoint_path', default='/piwik.php',
             help="The tracker endpoint path to use when tracking. Defaults to /piwik.php."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--dry-run', dest='dry_run',
             action='store_true', default=False,
             help="Perform a trial run with no tracking data being inserted into Matomo",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--show-progress', dest='show_progress',
             action='store_true', default=os.isatty(sys.stdout.fileno()),
             help="Print a progress report X seconds (default: 1, use --show-progress-delay to override)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--show-progress-delay', dest='show_progress_delay',
-            type='int', default=1,
+            type=int, default=1,
             help="Change the default progress delay"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--add-sites-new-hosts', dest='add_sites_new_hosts',
             action='store_true', default=False,
             help="When a hostname is found in the log file, but not matched to any website "
             "in Matomo, automatically create a new website in Matomo with this hostname to "
             "import the logs"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--idsite', dest='site_id',
             help= ("When specified, "
                    "data in the specified log files will be tracked for this Matomo site ID."
                    " The script will not auto-detect the website based on the log line hostname (new websites will not be automatically created).")
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--idsite-fallback', dest='site_id_fallback',
             help="Default Matomo site ID to use if the hostname doesn't match any "
             "known Website's URL. New websites will not be automatically created. "
@@ -552,97 +563,97 @@ class Configuration(object):
             os.path.join(os.path.dirname(__file__),
             '../../config/config.ini.php'),
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--config', dest='config_file', default=default_config,
             help=(
                 "This is only used when --login and --password is not used. "
-                "Matomo will read the configuration file (default: %default) to "
+                "Matomo will read the configuration file (default: %(default)s) to "
                 "fetch the Super User token_auth from the config file. "
             )
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--login', dest='login',
             help="You can manually specify the Matomo Super User login"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--password', dest='password',
             help="You can manually specify the Matomo Super User password"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--token-auth', dest='matomo_token_auth',
             help="Matomo user token_auth, the token_auth is found in Matomo > Settings > API. "
                  "You must use a token_auth that has at least 'admin' or 'super user' permission. "
                  "If you use a token_auth for a non admin user, your users' IP addresses will not be tracked properly. "
         )
 
-        option_parser.add_option(
+        parser.add_argument(
             '--hostname', dest='hostnames', action='append', default=[],
             help="Accepted hostname (requests with other hostnames will be excluded). "
             " You may use the star character * "
             " Example: --hostname=*domain.com"
             " Can be specified multiple times"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--exclude-path', dest='excluded_paths', action='append', default=[],
             help="Any URL path matching this exclude-path will not be imported in Matomo. "
             " You must use the star character *. "
             " Example: --exclude-path=*/admin/*"
             " Can be specified multiple times. "
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--exclude-path-from', dest='exclude_path_from',
             help="Each line from this file is a path to exclude. Each path must contain the character * to match a string. (see: --exclude-path)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--include-path', dest='included_paths', action='append', default=[],
             help="Paths to include. Can be specified multiple times. If not specified, all paths are included."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--include-path-from', dest='include_path_from',
             help="Each line from this file is a path to include"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--useragent-exclude', dest='excluded_useragents',
             action='append', default=[],
             help="User agents to exclude (in addition to the standard excluded "
             "user agents). Can be specified multiple times",
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-static', dest='enable_static',
             action='store_true', default=False,
             help="Track static files (images, css, js, ico, ttf, etc.)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-bots', dest='enable_bots',
             action='store_true', default=False,
             help="Track bots. All bot visits will have a Custom Variable set with name='Bot' and value='$Bot_user_agent_here$'"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-http-errors', dest='enable_http_errors',
             action='store_true', default=False,
             help="Track HTTP errors (status code 4xx or 5xx)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-http-redirects', dest='enable_http_redirects',
             action='store_true', default=False,
             help="Track HTTP redirects (status code 3xx except 304)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-reverse-dns', dest='reverse_dns',
             action='store_true', default=False,
             help="Enable reverse DNS, used to generate the 'Providers' report in Matomo. "
                  "Disabled by default, as it impacts performance"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--strip-query-string', dest='strip_query_string',
             action='store_true', default=False,
             help="Strip the query string from the URL"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--query-string-delimiter', dest='query_string_delimiter', default='?',
-            help="The query string delimiter (default: %default)"
+            help="The query string delimiter (default: %(default)s)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--log-format-name', dest='log_format_name', default=None,
             help=("Access log format to detect (supported are: %s). "
                   "When not specified, the log format will be autodetected by trying all supported log formats."
@@ -651,82 +662,82 @@ class Configuration(object):
         available_regex_groups = ['date', 'path', 'query_string', 'ip', 'user_agent', 'referrer', 'status',
                                   'length', 'host', 'userid', 'generation_time_milli', 'event_action',
                                   'event_name', 'timezone', 'session_time']
-        option_parser.add_option(
+        parser.add_argument(
             '--log-format-regex', dest='log_format_regex', default=None,
             help="Regular expression used to parse log entries. Regexes must contain named groups for different log fields. "
                  "Recognized fields include: %s. For an example of a supported Regex, see the source code of this file. "
                  "Overrides --log-format-name." % (', '.join(available_regex_groups))
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--log-date-format', dest='log_date_format', default=None,
             help="Format string used to parse dates. You can specify any format that can also be specified to "
                  "the strptime python function."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--log-hostname', dest='log_hostname', default=None,
             help="Force this hostname for a log format that doesn't include it. All hits "
             "will seem to come to this host"
         )
-        option_parser.add_option(
-            '--skip', dest='skip', default=0, type='int',
+        parser.add_argument(
+            '--skip', dest='skip', default=0, type=int,
             help="Skip the n first lines to start parsing/importing data at a given line for the specified log file",
         )
-        option_parser.add_option(
-            '--recorders', dest='recorders', default=1, type='int',
-            help="Number of simultaneous recorders (default: %default). "
+        parser.add_argument(
+            '--recorders', dest='recorders', default=1, type=int,
+            help="Number of simultaneous recorders (default: %(default)s). "
             "It should be set to the number of CPU cores in your server. "
             "You can also experiment with higher values which may increase performance until a certain point",
         )
-        option_parser.add_option(
-            '--recorder-max-payload-size', dest='recorder_max_payload_size', default=200, type='int',
-            help="Maximum number of log entries to record in one tracking request (default: %default). "
+        parser.add_argument(
+            '--recorder-max-payload-size', dest='recorder_max_payload_size', default=200, type=int,
+            help="Maximum number of log entries to record in one tracking request (default: %(default)s). "
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--replay-tracking', dest='replay_tracking',
             action='store_true', default=False,
             help="Replay piwik.php requests found in custom logs (only piwik.php requests expected). \nSee https://matomo.org/faq/how-to/faq_17033/"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--replay-tracking-expected-tracker-file', dest='replay_tracking_expected_tracker_file', default=None,
             help="The expected suffix for tracking request paths. Only logs whose paths end with this will be imported. By default "
             "requests to the piwik.php file or the matomo.php file will be imported."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--output', dest='output',
             help="Redirect output (stdout and stderr) to the specified file"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--encoding', dest='encoding', default='utf8',
-            help="Log files encoding (default: %default)"
+            help="Log files encoding (default: %(default)s)"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--disable-bulk-tracking', dest='use_bulk_tracking',
             default=True, action='store_false',
             help="Disables use of bulk tracking so recorders record one hit at a time."
         )
-        option_parser.add_option(
-            '--debug-force-one-hit-every-Ns', dest='force_one_action_interval', default=False, type='float',
+        parser.add_argument(
+            '--debug-force-one-hit-every-Ns', dest='force_one_action_interval', default=False, type=float,
             help="Debug option that will force each recorder to record one hit every N secs."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--force-lowercase-path', dest='force_lowercase_path', default=False, action='store_true',
             help="Make URL path lowercase so paths with the same letters but different cases are "
                  "treated the same."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--enable-testmode', dest='enable_testmode', default=False, action='store_true',
             help="If set, it will try to get the token_auth from the matomo_tests directory"
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--download-extensions', dest='download_extensions', default=None,
             help="By default Matomo tracks as Downloads the most popular file extensions. If you set this parameter (format: pdf,doc,...) then files with an extension found in the list will be imported as Downloads, other file extensions downloads will be skipped."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--add-download-extensions', dest='extra_download_extensions', default=None,
             help="Add extensions that should be treated as downloads. See --download-extensions for more info."
         )
-        option_parser.add_option(
-            '--w3c-map-field', action='callback', callback=functools.partial(self._set_option_map, 'custom_w3c_fields'), type='string',
+        parser.add_argument(
+            '--w3c-map-field', action=StoreDictKeyPair, metavar='KEY=VAL', default={}, dest="custom_w3c_fields",
             help="Map a custom log entry field in your W3C log to a default one. Use this option to load custom log "
                  "files that use the W3C extended log format such as those from the Advanced Logging W3C module. Used "
                  "as, eg, --w3c-map-field my-date=date. Recognized default fields include: %s\n\n"
@@ -734,48 +745,48 @@ class Configuration(object):
                  "fields that can be mapped."
                      % (', '.join(list(W3cExtendedFormat.fields.keys())))
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--w3c-time-taken-millisecs', action='store_true', default=False, dest='w3c_time_taken_in_millisecs',
             help="If set, interprets the time-taken W3C log field as a number of milliseconds. This must be set for importing"
                  " IIS logs."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--w3c-fields', dest='w3c_fields', default=None,
             help="Specify the '#Fields:' line for a log file in the W3C Extended log file format. Use this option if "
                  "your log file doesn't contain the '#Fields:' line which is required for parsing. This option must be used "
                  "in conjuction with --log-format-name=w3c_extended.\n"
                  "Example: --w3c-fields='#Fields: date time c-ip ...'"
         )
-        option_parser.add_option(
-            '--w3c-field-regex', action='callback', callback=functools.partial(self._set_option_map, 'w3c_field_regexes'), type='string',
+        parser.add_argument(
+            '--w3c-field-regex', action=StoreDictKeyPair, metavar='KEY=VAL', default={}, dest="w3c_field_regexes", type=str,
             help="Specify a regex for a field in your W3C extended log file. You can use this option to parse fields the "
                  "importer does not natively recognize and then use one of the --regex-group-to-XXX-cvar options to track "
                  "the field in a custom variable. For example, specifying --w3c-field-regex=sc-win32-status=(?P<win32_status>\\S+) "
                  "--regex-group-to-page-cvar=\"win32_status=Windows Status Code\" will track the sc-win32-status IIS field "
                  "in the 'Windows Status Code' custom variable. Regexes must contain a named group."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--title-category-delimiter', dest='title_category_delimiter', default='/',
             help="If --enable-http-errors is used, errors are shown in the page titles report. If you have "
             "changed General.action_title_category_delimiter in your Matomo configuration, you need to set this "
             "option to the same value in order to get a pretty page titles report."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--dump-log-regex', dest='dump_log_regex', action='store_true', default=False,
             help="Prints out the regex string used to parse log lines and exists. Can be useful for using formats "
                  "in newer versions of the script in older versions of the script. The output regex can be used with "
                  "the --log-format-regex option."
         )
 
-        option_parser.add_option(
+        parser.add_argument(
             '--ignore-groups', dest='regex_groups_to_ignore', default=None,
             help="Comma separated list of regex groups to ignore when parsing log lines. Can be used to, for example, "
                  "disable normal user id tracking. See documentation for --log-format-regex for list of available "
                  "regex groups."
         )
 
-        option_parser.add_option(
-            '--regex-group-to-visit-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_visit_cvars_map'), type='string',
+        parser.add_argument(
+            '--regex-group-to-visit-cvar', action=StoreDictKeyPair, metavar='KEY=VAL',dest='regex_group_to_visit_cvars_map', default={},
             help="Track an attribute through a custom variable with visit scope instead of through Matomo's normal "
                  "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
                  "parameter, supply --regex-group-to-visit-cvar=\"userid=User Name\". This will track usernames in a "
@@ -783,8 +794,8 @@ class Configuration(object):
                  "for --log-format-regex (additional regex groups you may have defined "
                  "in --log-format-regex can also be used)."
         )
-        option_parser.add_option(
-            '--regex-group-to-page-cvar', action='callback', callback=functools.partial(self._set_option_map, 'regex_group_to_page_cvars_map'), type='string',
+        parser.add_argument(
+            '--regex-group-to-page-cvar', action=StoreDictKeyPair, metavar='KEY=VAL', dest='regex_group_to_page_cvars_map', default={},
             help="Track an attribute through a custom variable with page scope instead of through Matomo's normal "
                  "approach. For example, to track usernames as a custom variable instead of through the uid tracking "
                  "parameter, supply --regex-group-to-page-cvar=\"userid=User Name\". This will track usernames in a "
@@ -792,105 +803,79 @@ class Configuration(object):
                  "for --log-format-regex (additional regex groups you may have defined "
                  "in --log-format-regex can also be used)."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--track-http-method', dest='track_http_method', default=False,
             help="Enables tracking of http method as custom page variable if method group is available in log format."
         )
-        option_parser.add_option(
-            '--retry-max-attempts', dest='max_attempts', default=MATOMO_DEFAULT_MAX_ATTEMPTS, type='int',
+        parser.add_argument(
+            '--retry-max-attempts', dest='max_attempts', default=MATOMO_DEFAULT_MAX_ATTEMPTS, type=int,
             help="The maximum number of times to retry a failed tracking request."
         )
-        option_parser.add_option(
-            '--retry-delay', dest='delay_after_failure', default=MATOMO_DEFAULT_DELAY_AFTER_FAILURE, type='int',
+        parser.add_argument(
+            '--retry-delay', dest='delay_after_failure', default=MATOMO_DEFAULT_DELAY_AFTER_FAILURE, type=int,
             help="The number of seconds to wait before retrying a failed tracking request."
         )
-        option_parser.add_option(
-            '--request-timeout', dest='request_timeout', default=DEFAULT_SOCKET_TIMEOUT, type='int',
+        parser.add_argument(
+            '--request-timeout', dest='request_timeout', default=DEFAULT_SOCKET_TIMEOUT, type=int,
             help="The maximum number of seconds to wait before terminating an HTTP request to Matomo."
         )
-        option_parser.add_option(
-            '--include-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'include_host'),
+        parser.add_argument(
+            '--include-host', action='append', type=str,
             help="Only import logs from the specified host(s)."
         )
-        option_parser.add_option(
-            '--exclude-host', action='callback', type='string', callback=functools.partial(self._add_to_array, 'exclude_host'),
+        parser.add_argument(
+            '--exclude-host', action='append', type=str,
             help="Only import logs that are not from the specified host(s)."
         )
-        option_parser.add_option(
-            '--exclude-older-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_older_than'),
+        parser.add_argument(
+            '--exclude-older-than', type=self._valid_date, default=None,
             help="Ignore logs older than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
-        option_parser.add_option(
-            '--exclude-newer-than', action='callback', type='string', default=None, callback=functools.partial(self._set_date, 'exclude_newer_than'),
+        parser.add_argument(
+            '--exclude-newer-than', type=self._valid_date, default=None,
             help="Ignore logs newer than the specified date. Exclusive. Date format must be YYYY-MM-DD hh:mm:ss +/-0000. The timezone offset is required."
         )
-        option_parser.add_option(
-            '--add-to-date', dest='seconds_to_add_to_date', default=0, type='int',
+        parser.add_argument(
+            '--add-to-date', dest='seconds_to_add_to_date', default=0, type=int,
             help="A number of seconds to add to each date value in the log file."
         )
-        option_parser.add_option(
-            '--request-suffix', dest='request_suffix', default=None, type='string', help="Extra parameters to append to tracker and API requests."
+        parser.add_argument(
+            '--request-suffix', dest='request_suffix', default=None, type=str, help="Extra parameters to append to tracker and API requests."
         )
-        option_parser.add_option(
+        parser.add_argument(
             '--accept-invalid-ssl-certificate',
             dest='accept_invalid_ssl_certificate', action='store_true',
             default=False,
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server."
         )
-        return option_parser
+        return parser
 
-    def _set_date(self, option_attr_name, option, opt_str, value, parser):
+    def _valid_date(self, value):
         try:
             (date_str, timezone) = value.rsplit(' ', 1)
         except:
-            fatal_error("Invalid date value '%s'." % value)
+            raise argparse.ArgumentTypeError("Invalid date value '%s'." % value)
 
         if not re.match('[-+][0-9]{4}', timezone):
-            fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
+            raise argparse.ArgumentTypeError("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
 
         timezone = float(timezone)
 
         date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
         date -= datetime.timedelta(hours=timezone/100)
 
-        setattr(parser.values, option_attr_name, date)
-
-    def _add_to_array(self, option_attr_name, option, opt_str, value, parser):
-        if not hasattr(parser.values, option_attr_name) or not getattr(parser.values, option_attr_name):
-            setattr(parser.values, option_attr_name, [])
-        getattr(parser.values, option_attr_name).append(value)
-
-    def _set_option_map(self, option_attr_name, option, opt_str, value, parser):
-        """
-        Sets a key-value mapping in a dict that is built from command line options. Options that map
-        string keys to string values (like --w3c-map-field) can set the callback to a bound partial
-        of this method to handle the option.
-        """
-
-        parts = value.split('=')
-
-        if len(parts) != 2:
-            fatal_error("Invalid %s option: '%s'" % (opt_str, value))
-
-        key, value = parts
-
-        if not hasattr(parser.values, option_attr_name):
-            setattr(parser.values, option_attr_name, {})
-
-        getattr(parser.values, option_attr_name)[key] = value
+        return date
 
     def _parse_args(self, option_parser):
         """
         Parse the command line args and create self.options and self.filenames.
         """
-        self.options, self.filenames = option_parser.parse_args(sys.argv[1:])
+        self.options = option_parser.parse_args()
+        self.filenames=self.options.file
+        print(self.options)
 
         if self.options.output:
             sys.stdout = sys.stderr = open(self.options.output, 'a+', 0)
-
-        if not self.filenames:
-            print((option_parser.format_help()))
-            sys.exit(1)
 
         # Configure logging before calling logging.{debug,info}.
         logging.basicConfig(
@@ -938,23 +923,13 @@ class Configuration(object):
                     fatal_error("custom W3C field mapping error: don't know how to parse and use the '%s' field" % default_name)
                     return
 
-        if not hasattr(self.options, 'regex_group_to_visit_cvars_map'):
-            self.options.regex_group_to_visit_cvars_map = {}
-
-        if not hasattr(self.options, 'regex_group_to_page_cvars_map'):
-            self.options.regex_group_to_page_cvars_map = {}
-
-        if not hasattr(self.options, 'w3c_field_regexes'):
-            self.options.w3c_field_regexes = {}
-        else:
+        if hasattr(self.options, 'w3c_field_regexes'):
             # make sure each custom w3c field regex has a named group
             for field_name, field_regex in self.options.w3c_field_regexes.items():
                 if '(?P<' not in field_regex:
                     fatal_error("cannot find named group in custom w3c field regex '%s' for field '%s'" % (field_regex, field_name))
                     return
 
-        if not self.options.matomo_url:
-            fatal_error('no URL given for Matomo')
 
         if not (self.options.matomo_url.startswith('http://') or self.options.matomo_url.startswith('https://')):
             self.options.matomo_url = 'http://' + self.options.matomo_url
