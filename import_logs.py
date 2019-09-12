@@ -68,7 +68,8 @@ DOWNLOAD_EXTENSIONS = set((
     'azw3 epub mobi apk'
 ).split())
 
-# A good source is: http://phpbb-bots.blogspot.com/
+# If you want to add more bots, take a look at the Matomo Device Detector botlist:
+# https://github.com/matomo-org/device-detector/blob/master/regexes/bots.yml
 # user agents must be lowercase
 EXCLUDED_USER_AGENTS = (
     'adsbot-google',
@@ -502,12 +503,12 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--url', dest='matomo_url',
-            help="REQUIRED Your Matomo server URL, eg. http://example.com/matomo/ or http://analytics.example.net",
+            help="REQUIRED Your Matomo server URL, eg. https://example.com/matomo/ or https://analytics.example.net",
         )
         option_parser.add_option(
             '--api-url', dest='matomo_api_url',
             help="This URL will be used to send API requests (use it if your tracker URL differs from UI/API url), "
-            "eg. http://other-example.com/matomo/ or http://analytics-api.example.net",
+            "eg. https://other-example.com/matomo/ or https://analytics-api.example.net",
         )
         option_parser.add_option(
             '--tracker-endpoint-path', dest='matomo_tracker_endpoint_path', default='/piwik.php',
@@ -1094,7 +1095,7 @@ class Statistics(object):
     class Counter(object):
         """
         Simple integers cannot be used by multithreaded programs. See:
-        http://stackoverflow.com/questions/6320107/are-python-ints-thread-safe
+        https://stackoverflow.com/questions/6320107/are-python-ints-thread-safe
         """
         def __init__(self):
             # itertools.count's implementation in C does not release the GIL and
@@ -1448,7 +1449,7 @@ class Matomo(object):
             auth_password = None
 
         if auth_user is not None:
-            base64string = base64.encodestring('%s:%s' % (auth_user, auth_password)).replace('\n', '')
+            base64string = base64.encodebytes('%s:%s' % (auth_user, auth_password)).replace('\n', '')
             request.add_header("Authorization", "Basic %s" % base64string)
 
         # Use non-default SSL context if invalid certificates shall be
@@ -1497,7 +1498,7 @@ class Matomo(object):
             args.update(kwargs)
 
         # Convert lists into appropriate format.
-        # See: http://developer.matomo.org/api-reference/reporting-api#passing-an-array-of-data-as-a-parameter
+        # See: https://developer.matomo.org/api-reference/reporting-api#passing-an-array-of-data-as-a-parameter
         # Warning: we have to pass the parameters in order: foo[0], foo[1], foo[2]
         # and not foo[1], foo[0], foo[2] (it will break Matomo otherwise.)
         final_args = []
