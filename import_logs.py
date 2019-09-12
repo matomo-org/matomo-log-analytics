@@ -997,7 +997,7 @@ class Configuration(object):
                 'No credentials specified, reading them from "%s"',
                 self.options.config_file,
             )
-            config_file = configparser.RawConfigParser()
+            config_file = configparser.RawConfigParser(strict=False)
             success = len(config_file.read(self.options.config_file)) > 0
             if not success:
                 fatal_error(
