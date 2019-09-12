@@ -50,7 +50,7 @@ import functools
 import traceback
 import socket
 import textwrap
-
+import collections
 
 ##
 ## Constants.
@@ -1326,7 +1326,7 @@ class UrlHelper(object):
         structure that will convert correctly to JSON.
         """
 
-        final_args = {}
+        final_args = collections.OrderedDict()
         for key, value in args.items():
             indices = key.split('[')
             if '[' in key:
@@ -1880,11 +1880,11 @@ class Recorder(object):
         if config.options.replay_tracking:
             # prevent request to be force recorded when option replay-tracking
             args['rec'] = '0'
-            
+
         # idsite is already determined by resolver
         if 'idsite' in hit.args:
             del hit.args['idsite']
-            
+
         args.update(hit.args)
 
         if hit.is_download:
@@ -1970,7 +1970,7 @@ class Recorder(object):
                         logging.info("tracker response:\n%s" % response)
 
                     response = {}
-                
+
                 if ('invalid_indices' in response and isinstance(response['invalid_indices'], list) and
                     response['invalid_indices']):
                     invalid_count = len(response['invalid_indices'])
