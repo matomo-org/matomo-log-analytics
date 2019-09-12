@@ -1,11 +1,12 @@
 # vim: et sw=4 ts=4:
-import functools
-import os
 import datetime
-import re
 import json
+import os
+import re
+from collections import OrderedDict
 
 import import_logs
+
 
 # utility functions
 def add_junk_to_file(path):
@@ -905,7 +906,9 @@ def test_urlhelper_convert_array_args():
     _test( {'abc[key1][0]': 'def', 'abc[key1][1]': 'ghi', 'abc[key2][4]': 'hij'}, {'abc': {'key1': ['def', 'ghi'], 'key2': {4: 'hij'}}})
 
     # with multiple inconsistent data strucutres
-    _test( {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
+    # using OrderedDict to make the test deterministic
+    inputdata = OrderedDict([('abc[key1][3]', 1), ('abc[key1][]', 23), ('ghi[key2][]', 45), ('ghi[key2][abc]', 56)])
+    _test( inputdata, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
 
 # Matomo error test
 def test_matomo_error_construct():
