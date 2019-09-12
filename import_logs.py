@@ -835,7 +835,7 @@ class Configuration(object):
             '--accept-invalid-ssl-certificate',
             dest='accept_invalid_ssl_certificate', action='store_true',
             default=False,
-            help="Do not verify the SSL / TLS certificate when contacting the Matomo server. This is the default when running on Python 2.7.8 or older."
+            help="Do not verify the SSL / TLS certificate when contacting the Matomo server."
         )
         return option_parser
 
