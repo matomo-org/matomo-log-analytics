@@ -1036,6 +1036,7 @@ class Configuration(object):
 
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             [stdout, stderr] = process.communicate()
+            stdout, stderr = stdout.decode(), stderr.decode()
             if process.returncode != 0:
                 fatal_error("`" + command + "` failed with error: " + stderr + ".\nReponse code was: " + str(process.returncode) + ". You can alternatively run the importer using the --login and --password option")
 
