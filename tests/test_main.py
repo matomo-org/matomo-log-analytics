@@ -74,7 +74,7 @@ def test_format_detection():
     def _test_junk(format_name, log_file = None):
         if log_file is None:
             log_file = 'logs/%s.log' % format_name
-        
+
         tmp_path = add_junk_to_file(log_file)
 
         file = open(tmp_path)
@@ -117,46 +117,36 @@ def test_format_detection():
         if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh':
             continue
 
-        f = functools.partial(_test, format_name)
-        f.description = 'Testing autodetection of format ' + format_name
-        yield f
+        # 'Testing autodetection of format ' + format_name
+        _test(format_name)
 
-        f = functools.partial(_test_junk, format_name)
-        f.description = 'Testing autodetection of format ' + format_name + ' w/ garbage at end of line'
-        yield f
+        # 'Testing autodetection of format ' + format_name + ' w/ garbage at end of line'
+        _test_junk(format_name)
 
-        f = functools.partial(_test_multiple_spaces, format_name)
-        f.description = 'Testing autodetection of format ' + format_name + ' when multiple spaces separate fields'
-        yield f
+        # 'Testing autodetection of format ' + format_name + ' when multiple spaces separate fields'
+        _test_multiple_spaces(format_name)
 
-        f = functools.partial(_test_ipv6, format_name)
-        f.description = 'Testing parsing of IPv6 address with format ' + format_name
-        yield f
+        # 'Testing parsing of IPv6 address with format ' + format_name
+        _test_ipv6(format_name)
 
     # add tests for amazon cloudfront (normal web + rtmp)
-    f = functools.partial(_test, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
-    f.description = 'Testing autodetection of amazon cloudfront (web) logs.'
-    yield f
+    # 'Testing autodetection of amazon cloudfront (web) logs.'
+    _test('amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
 
-    f = functools.partial(_test_junk, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
-    f.description = 'Testing autodetection of amazon cloudfront (web) logs w/ garbage at end of line'
-    yield f
+    #' Testing autodetection of amazon cloudfront (web) logs w/ garbage at end of line'
+    _test_junk('amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
 
-    f = functools.partial(_test_multiple_spaces, 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
-    f.description = 'Testing autodetection of format amazon cloudfront (web) logs when multiple spaces separate fields'
-    yield f
+    # 'Testing autodetection of format amazon cloudfront (web) logs when multiple spaces separate fields'
+    _test_multiple_spaces( 'amazon_cloudfront', 'logs/amazon_cloudfront_web.log')
 
-    f = functools.partial(_test, 'amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
-    f.description = 'Testing autodetection of amazon cloudfront (rtmp) logs.'
-    yield f
+    # 'Testing autodetection of amazon cloudfront (rtmp) logs.'
+    _test( 'amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
 
-    f = functools.partial(_test_junk, 'amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
-    f.description = 'Testing autodetection of amazon cloudfront (rtmp) logs w/ garbage at end of line.'
-    yield f
+    # 'Testing autodetection of amazon cloudfront (rtmp) logs w/ garbage at end of line.'
+    _test_junk('amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
 
-    f = functools.partial(_test_multiple_spaces, 'amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
-    f.description = 'Testing autodetection of format amazon cloudfront (rtmp) logs when multiple spaces separate fields'
-    yield f
+    # 'Testing autodetection of format amazon cloudfront (rtmp) logs when multiple spaces separate fields'
+    _test_multiple_spaces( 'amazon_cloudfront', 'logs/amazon_cloudfront_rtmp.log')
 
 class Options(object):
     """Mock config options necessary to run checkers from Parser class."""
@@ -416,17 +406,14 @@ def test_format_parsing():
         if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb':
             continue
 
-        f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
-        f.description = 'Testing parsing of format "%s"' % format_name
-        yield f
+        # 'Testing parsing of format "%s"' % format_name
+        _test( format_name, 'logs/' + format_name + '.log')
 
-        f = functools.partial(_test_with_junk, format_name, 'logs/' + format_name + '.log')
-        f.description = 'Testing parsing of format "%s" with junk appended to path' % format_name
-        yield f
+        # 'Testing parsing of format "%s" with junk appended to path' % format_name
+        _test_with_junk( format_name, 'logs/' + format_name + '.log')
 
-    f = functools.partial(_test, 'common', 'logs/ncsa_extended.log')
-    f.description = 'Testing parsing of format "common" with ncsa_extended log'
-    yield f
+    # 'Testing parsing of format "common" with ncsa_extended log'
+    _test( 'common', 'logs/ncsa_extended.log')
 
 def test_iis_custom_format():
     """test IIS custom format name parsing."""
@@ -901,30 +888,24 @@ def test_urlhelper_convert_array_args():
         actual = import_logs.UrlHelper.convert_array_args(input)
         assert json.loads(json.dumps(actual)) == json.loads(json.dumps(expected))
 
-    f = functools.partial(_test, {'abc': 'def', 'ghi': 23}, {'abc': 'def', 'ghi': 23})
-    f.description = 'without array args'
-    yield f
+    # without array args
+    _test( {'abc': 'def', 'ghi': 23}, {'abc': 'def', 'ghi': 23})
 
-    f = functools.partial(_test, {'abc[]': 'def', 'ghi': 23}, {'abc': ['def'], 'ghi': 23})
-    f.description = 'with normal array args'
-    yield f
+    # with normal array args
+    _test( {'abc[]': 'def', 'ghi': 23}, {'abc': ['def'], 'ghi': 23})
 
-    f = functools.partial(_test, {'abc[key1]': 'def', 'ghi[0]': 23, 'abc[key2]': 'val2', 'abc[key3][key4]': 'val3'},
+    # with associative array args
+    _test( {'abc[key1]': 'def', 'ghi[0]': 23, 'abc[key2]': 'val2', 'abc[key3][key4]': 'val3'},
         {'abc': {'key1': 'def', 'key2': 'val2', 'key3': {'key4': 'val3'}}, 'ghi': [23]})
-    f.description = 'with associative array args'
-    yield f
 
-    f = functools.partial(_test, {'abc[0]': 1, 'abc[2]': 2, 'abc[1]': 3, 'ghi[0]': 4, 'ghi[2]': 5}, {'abc': [1, 3, 2], 'ghi': {'0': 4, '2': 5}})
-    f.description = 'with array index keys'
-    yield f
+    # with array index keys
+    _test( {'abc[0]': 1, 'abc[2]': 2, 'abc[1]': 3, 'ghi[0]': 4, 'ghi[2]': 5}, {'abc': [1, 3, 2], 'ghi': {'0': 4, '2': 5}})
 
-    f = functools.partial(_test, {'abc[key1][0]': 'def', 'abc[key1][1]': 'ghi', 'abc[key2][4]': 'hij'}, {'abc': {'key1': ['def', 'ghi'], 'key2': {4: 'hij'}}})
-    f.description = 'with both associative & normal arrays'
-    yield f
+    # with both associative & normal arrays
+    _test( {'abc[key1][0]': 'def', 'abc[key1][1]': 'ghi', 'abc[key2][4]': 'hij'}, {'abc': {'key1': ['def', 'ghi'], 'key2': {4: 'hij'}}})
 
-    f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
-    f.description = 'with multiple inconsistent data strucutres'
-    yield f
+    # with multiple inconsistent data strucutres
+    _test( {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
 
 # Matomo error test
 def test_matomo_error_construct():
