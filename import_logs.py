@@ -993,7 +993,7 @@ class Configuration(object):
 
         if self.options.login and self.options.password:
             matomo_login = self.options.login
-            matomo_password = hashlib.md5(self.options.password).hexdigest()
+            matomo_password = hashlib.md5(self.options.password.encode('utf-8')).hexdigest()
 
             logging.debug('Using credentials: (login = %s, password = %s)', matomo_login, matomo_password)
             try:
@@ -1438,7 +1438,7 @@ class Matomo(object):
         except:
             timeout = None # the config global object may not be created at this point
 
-        request = urllib.request.Request(url + path, data, headers)
+        request = urllib.request.Request(url + path, data.encode("utf-8"), headers)
 
         # Handle basic auth if auth_user set
         try:
