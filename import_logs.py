@@ -1869,13 +1869,13 @@ class Recorder(object):
         args = {
             'rec': '1',
             'apiv': '1',
-            'url': url.encode('utf8'),
-            'urlref': hit.referrer[:1024].encode('utf8'),
+            'url': url,
+            'urlref': hit.referrer[:1024],
             'cip': hit.ip,
             'cdt': self.date_to_matomo(hit.date),
             'idsite': site_id,
             'dp': '0' if config.options.reverse_dns else '1',
-            'ua': hit.user_agent.encode('utf8')
+            'ua': hit.user_agent
         }
 
         if config.options.replay_tracking:
