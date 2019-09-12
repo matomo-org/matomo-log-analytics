@@ -1005,7 +1005,7 @@ class Configuration(object):
                 )
 
             updatetokenfile = os.path.abspath(
-                os.path.join(os.path.dirname(__file__),
+                os.path.join(self.options.config_file,
                     '../../misc/cron/updatetoken.php'),
             )
 
