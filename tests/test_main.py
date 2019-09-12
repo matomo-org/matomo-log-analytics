@@ -837,8 +837,8 @@ def test_w3c_custom_field_regex_option():
     import_logs.config.options.replay_tracking = False
     import_logs.config.options.w3c_time_taken_in_millisecs = True
     import_logs.config.options.w3c_field_regexes = {
-        'sc-substatus': '(?P<substatus>\S+)',
-        'sc-win32-status': '(?P<win32_status>\S+)'
+        'sc-substatus': r'(?P<substatus>\S+)',
+        'sc-win32-status': r'(?P<win32_status>\S+)'
     }
 
     format = import_logs.W3cExtendedFormat()
@@ -869,8 +869,8 @@ def test_custom_log_date_format_option():
     import_logs.config.options.regex_group_to_visit_cvars_map = None
     import_logs.config.options.regex_group_to_page_cvars_map = None
     import_logs.config.options.log_format_regex = (
-        '(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<date>.*?)\]\s+'
-        '"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
+        r'(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<date>.*?)\]\s+'
+        r'"\S+\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\S+)\s+(?P<length>\S+)'
     )
     import_logs.config.options.log_date_format = '%B - %d, %Y:%H:%M:%S'
     import_logs.config.format = import_logs.RegexFormat('custom', import_logs.config.options.log_format_regex,
