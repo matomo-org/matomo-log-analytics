@@ -1527,7 +1527,7 @@ class MatomoHttpUrllib(MatomoHttpBase):
 
                 # decorate message w/ HTTP response, if it can be retrieved
                 if hasattr(e, 'read'):
-                    message = message + ", response: " + e.read()
+                    message = message + ", response: " + e.read().decode()
 
                 try:
                     delay_after_failure = config.options.delay_after_failure
