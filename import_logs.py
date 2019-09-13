@@ -1425,7 +1425,7 @@ class MatomoHttpUrllib(MatomoHttpBase):
             auth_password = None
 
         if auth_user is not None:
-            base64string = base64.encodebytes('%s:%s' % (auth_user, auth_password)).replace('\n', '')
+            base64string = base64.encodebytes('{}:{}'.format(auth_user, auth_password).encode()).decode().replace('\n', '')
             request.add_header("Authorization", "Basic %s" % base64string)
 
         # Use non-default SSL context if invalid certificates shall be
