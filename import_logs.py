@@ -1369,7 +1369,7 @@ class MatomoHttpBase:
             self.code = code
 
 
-class MatomoHttpLegacy(MatomoHttpBase):
+class MatomoHttpUrllib(MatomoHttpBase):
     """
     Make requests to Matomo.
     """
@@ -2579,7 +2579,7 @@ if __name__ == '__main__':
         config = Configuration()
         # The matomo object depends on the config object, so we have to create
         # it after creating the configuration.
-        matomo = MatomoHttpLegacy()
+        matomo = MatomoHttpUrllib()
         # The init_token_auth method may need the matomo option, so we must call
         # it after creating the matomo object.
         config.init_token_auth()
