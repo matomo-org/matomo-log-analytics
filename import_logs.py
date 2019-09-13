@@ -114,7 +114,7 @@ MATOMO_EXPECTED_IMAGE = base64.b64decode(
 
 class BaseFormatException(Exception): pass
 
-class BaseFormat(object):
+class BaseFormat:
     def __init__(self, name):
         self.name = name
         self.regex = None
@@ -458,7 +458,7 @@ class StoreDictKeyPair(argparse.Action):
             my_dict[k] = v
         setattr(namespace, self.dest, my_dict)
 
-class Configuration(object):
+class Configuration:
     """
     Stores all the configuration options by reading sys.argv and parsing,
     if needed, the config.inc.php.
@@ -1062,13 +1062,13 @@ class Configuration(object):
         logging.debug('Authentication token token_auth is: %s', self.options.matomo_token_auth)
 
 
-class Statistics(object):
+class Statistics:
     """
     Store statistics about parsed logs and recorded entries.
     Can optionally print statistics on standard output every second.
     """
 
-    class Counter(object):
+    class Counter:
         """
         Simple integers cannot be used by multithreaded programs. See:
         https://stackoverflow.com/questions/6320107/are-python-ints-thread-safe
@@ -1294,7 +1294,7 @@ Processing your log data
     def stop_monitor(self):
         self.monitor_stop = True
 
-class UrlHelper(object):
+class UrlHelper:
 
     @staticmethod
     def convert_array_args(args):
@@ -1361,7 +1361,7 @@ class UrlHelper(object):
         return result
 
 
-class Matomo(object):
+class Matomo:
     """
     Make requests to Matomo.
     """
@@ -1563,7 +1563,7 @@ class Matomo(object):
 ## A resolver is a class that turns a hostname into a Matomo site ID.
 ##
 
-class StaticResolver(object):
+class StaticResolver:
     """
     Always return the same site ID, specified in the configuration.
     """
@@ -1587,7 +1587,7 @@ class StaticResolver(object):
     def check_format(self, format):
         pass
 
-class DynamicResolver(object):
+class DynamicResolver:
     """
     Use Matomo API to determine the site ID.
     """
@@ -1708,7 +1708,7 @@ class DynamicResolver(object):
                 "specify the Matomo site ID with the --idsite argument"
             )
 
-class Recorder(object):
+class Recorder:
     """
     A Recorder fetches hits from the Queue and inserts them into Matomo using
     the API.
@@ -1994,7 +1994,7 @@ class Recorder(object):
 
         return response['message']
 
-class Hit(object):
+class Hit:
     """
     It's a simple container.
     """
@@ -2040,7 +2040,7 @@ class Hit(object):
         index = len(self.args[api_arg_name]) + 1
         self.args[api_arg_name][index] = [key, value]
 
-class Parser(object):
+class Parser:
     """
     The Parser parses the lines in a specified file and inserts them into
     a Queue.
