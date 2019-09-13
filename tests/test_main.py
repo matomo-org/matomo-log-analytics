@@ -915,9 +915,9 @@ def test_matomo_error_construct():
     """Test that Matomo exception can be created."""
 
     try:
-        raise import_logs.Matomo.Error('test message', 120)
+        raise import_logs.MatomoHttpBase.Error('test message', 120)
 
         assert false
-    except import_logs.Matomo.Error as e:
+    except import_logs.MatomoHttpBase.Error as e:
         assert e.code == 120
         assert e.args[0] == 'test message'
