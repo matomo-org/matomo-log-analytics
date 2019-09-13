@@ -1057,7 +1057,7 @@ class Configuration:
         if not self.options.matomo_token_auth:
             try:
                 self.options.matomo_token_auth = self._get_token_auth()
-            except Matomo.Error as e:
+            except MatomoHttpBase.Error as e:
                 fatal_error(e)
         logging.debug('Authentication token token_auth is: %s', self.options.matomo_token_auth)
 
@@ -1360,18 +1360,19 @@ class UrlHelper:
             result.append(d[str(i)])
         return result
 
-
-class Matomo:
-    """
-    Make requests to Matomo.
-    """
-
+class MatomoHttpBase:
     class Error(Exception):
 
         def __init__(self, message, code = None):
-            super(Matomo.Error, self).__init__(message)
+            super(MatomoHttpBase.Error, self).__init__(message)
 
             self.code = code
+
+
+class MatomoHttpLegacy(MatomoHttpBase):
+    """
+    Make requests to Matomo.
+    """
 
     class RedirectHandlerWithLogging(urllib.request.HTTPRedirectHandler):
         """
@@ -1384,8 +1385,7 @@ class Matomo:
 
             return urllib.request.HTTPRedirectHandler.redirect_request(self, req, fp, code, msg, hdrs, newurl)
 
-    @staticmethod
-    def _call(path, args, headers=None, url=None, data=None):
+    def _call(self, path, args, headers=None, url=None, data=None):
         """
         Make a request to the Matomo site. It is up to the caller to format
         arguments, to embed authentication, etc.
@@ -1439,15 +1439,14 @@ class Matomo:
         else:
             https_handler_args = {}
         opener = urllib.request.build_opener(
-            Matomo.RedirectHandlerWithLogging(),
+            self.RedirectHandlerWithLogging(),
             urllib.request.HTTPSHandler(**https_handler_args))
         response = opener.open(request, timeout = timeout)
         result = response.read()
         response.close()
         return result
 
-    @staticmethod
-    def _call_api(method, **kwargs):
+    def _call_api(self, method, **kwargs):
         """
         Make a request to the Matomo API taking care of authentication, body
         formatting, etc.
@@ -1489,7 +1488,7 @@ class Matomo:
 #        logging.debug('%s' % final_args)
 #        logging.debug('%s' % url)
 
-        res = Matomo._call('/', final_args, url=url)
+        res = self._call('/', final_args, url=url)
 
 
         try:
@@ -1497,8 +1496,7 @@ class Matomo:
         except ValueError:
             raise urllib.error.URLError('Matomo returned an invalid response: ' + res)
 
-    @staticmethod
-    def _call_wrapper(func, expected_response, on_failure, *args, **kwargs):
+    def _call_wrapper(self, func, expected_response, on_failure, *args, **kwargs):
         """
         Try to make requests to Matomo at most MATOMO_FAILURE_MAX_RETRY times.
         """
@@ -1542,20 +1540,18 @@ class Matomo:
                 if errors == max_attempts:
                     logging.info("Max number of attempts reached, server is unreachable!")
 
-                    raise Matomo.Error(message, code)
+                    raise MatomoHttpBase.Error(message, code)
                 else:
                     logging.info("Retrying request, attempt number %d" % (errors + 1))
 
                     time.sleep(delay_after_failure)
 
-    @classmethod
-    def call(cls, path, args, expected_content=None, headers=None, data=None, on_failure=None):
-        return cls._call_wrapper(cls._call, expected_content, on_failure, path, args, headers,
+    def call(self, path, args, expected_content=None, headers=None, data=None, on_failure=None):
+        return self._call_wrapper(self._call, expected_content, on_failure, path, args, headers,
                                     data=data)
 
-    @classmethod
-    def call_api(cls, method, **kwargs):
-        return cls._call_wrapper(cls._call_api, None, None, method, **kwargs)
+    def call_api(self, method, **kwargs):
+        return self._call_wrapper(self._call_api, None, None, method, **kwargs)
 
 ##
 ## Resolvers.
@@ -1772,7 +1768,7 @@ class Recorder:
             if len(hits) > 0:
                 try:
                     self._record_hits(hits)
-                except Matomo.Error as e:
+                except MatomoHttpBase.Error as e:
                     fatal_error(e, hits[0].filename, hits[0].lineno) # approximate location of error
             self.queue.task_done()
 
@@ -1786,7 +1782,7 @@ class Recorder:
 
                 try:
                     self._record_hits([hit])
-                except Matomo.Error as e:
+                except MatomoHttpBase.Error as e:
                     fatal_error(e, hit.filename, hit.lineno)
             else:
                 self.unrecorded_hits = self.queue.get()
@@ -1960,7 +1956,7 @@ class Recorder:
                     logging.info("The Matomo tracker identified %s invalid requests on lines: %s" % (invalid_count, invalid_lines_str))
                 elif 'invalid' in response and response['invalid'] > 0:
                     logging.info("The Matomo tracker identified %s invalid requests." % response['invalid'])
-            except Matomo.Error as e:
+            except MatomoHttpBase.Error as e:
                 # if the server returned 400 code, BulkTracking may not be enabled
                 if e.code == 400:
                     fatal_error("Server returned status 400 (Bad Request).\nIs the BulkTracking plugin disabled?", hits[0].filename, hits[0].lineno)
@@ -2583,7 +2579,7 @@ if __name__ == '__main__':
         config = Configuration()
         # The matomo object depends on the config object, so we have to create
         # it after creating the configuration.
-        matomo = Matomo()
+        matomo = MatomoHttpLegacy()
         # The init_token_auth method may need the matomo option, so we must call
         # it after creating the matomo object.
         config.init_token_auth()
