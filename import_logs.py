@@ -395,7 +395,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
             return '200'
         elif key == 'user_agent':
             user_agent = super(AmazonCloudFrontFormat, self).get(key)
-            return urllib.parse.unquote(user_agent)
+            return urllib.parse.unquote(urllib.parse.unquote(user_agent))  # Value is double quoted!
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
