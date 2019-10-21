@@ -56,7 +56,11 @@ import collections
 ##
 
 STATIC_EXTENSIONS = set((
-    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml robots.txt webp'
+    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp'
+).split())
+
+STATIC_FILES = set((
+    'robots.txt'
 ).split())
 
 DOWNLOAD_EXTENSIONS = set((
@@ -2065,7 +2069,9 @@ class Parser:
         return result
 
     def check_static(self, hit):
-        if hit.extension in STATIC_EXTENSIONS:
+        filename = hit.path.split('/')[-1]
+
+        if hit.extension in STATIC_EXTENSIONS or filename in STATIC_FILES:
             if config.options.enable_static:
                 hit.is_download = True
                 return True
