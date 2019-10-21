@@ -893,6 +893,26 @@ def test_custom_log_date_format_option():
 
     assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 16, 42, 7)
 
+def test_static_ignores():
+    """Test static files are ignored."""
+    file_ = 'logs/static_ignores.log'
+
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.download_extensions = 'txt,doc'  # ensure robots.txt would be imported if not detected as static
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.args for hit in import_logs.Recorder.recorders]
+
+    assert len(hits) == 1
+
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
     def _test(input, expected):
