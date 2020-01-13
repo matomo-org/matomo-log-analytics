@@ -1,3 +1,7 @@
+```diff
+- Note: `master` branch is no longer in use, please check out one of our `*.x-dev` branches. Eg the `3.x-dev` branch is compatible with Matomo 3.X
+```
+
 # Matomo Server Log Analytics
 
 Import your server logs in Matomo with this powerful and easy to use tool.
