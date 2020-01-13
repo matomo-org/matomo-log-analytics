@@ -54,7 +54,8 @@ The most simple way to import your logs is to run:
 
 You must specify your Matomo URL with the `--url` argument.
 The script will automatically read your config.inc.php file to get the authentication
-token and communicate with your Matomo install to import the lines.
+token and communicate with your Matomo install to import the lines. If your Matomo install is on a different server, use the `--token-auth=<SECRET>` parameter to specify your API token.
+
 The default mode will try to mimic the Javascript tracker as much as possible,
 and will not track bots, static files, or error requests.
 

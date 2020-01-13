@@ -1032,7 +1032,7 @@ class Configuration:
                 command.append('--testmode')
 
             hostname = urllib.parse.urlparse( self.options.matomo_url ).hostname
-            command.append('--piwik-domain=' + hostname )
+            command.append('--matomo-domain=' + hostname )
 
             command = subprocess.list2cmdline(command)
 
