@@ -849,6 +849,18 @@ class Configuration(object):
             default=False,
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server. This is the default when running on Python 2.7.8 or older."
         )
+        option_parser.add_option(
+            '--pass-key-file-path', dest='pass_key_file_path', type='string', default=None,
+            help="Give path to pem key file location for authentication."
+        )
+        option_parser.add_option(
+            '--pass-cert-file-path', dest='pass_cert_file_path', type='string', default=None,
+            help="Give path to pem cert file location for authentication."
+        )
+        option_parser.add_option(
+            '--pass-ca-cert-file-path', dest='pass_ca_cert_file_path', type='string', default=None,
+            help="Give path to ca cert file location for authentication."
+        )
         return option_parser
 
     def _set_date(self, option_attr_name, option, opt_str, value, parser):
@@ -1474,12 +1486,22 @@ class Matomo(object):
             https_handler_args = {'context': ssl_context}
         else:
             https_handler_args = {}
-        opener = urllib2.build_opener(
-            Matomo.RedirectHandlerWithLogging(),
-            urllib2.HTTPSHandler(**https_handler_args))
-        response = opener.open(request, timeout = timeout)
-        result = response.read()
-        response.close()
+
+        # if passing in a key and cert file path authenticate with certs
+        if config.options.pass_key_file_path != None and config.options.pass_cert_file_path != None:
+            https_handler = VerifiedHTTPSHandler()
+            url_opener = urllib2.build_opener(https_handler)
+            response = url_opener.open(request, timeout = timeout)
+            result = response.read()
+            response.close()
+        # else authenticate without client certificates
+        else:
+            opener = urllib2.build_opener(
+                Matomo.RedirectHandlerWithLogging(),
+                urllib2.HTTPSHandler(**https_handler_args))
+            response = opener.open(request, timeout = timeout)
+            result = response.read()
+            response.close()
         return result
 
     @staticmethod
@@ -2586,6 +2608,35 @@ class Parser(object):
                     hit.add_page_custom_var(custom_var_name, value)
                 else:
                     hit.add_visit_custom_var(custom_var_name, value)
+
+class VerifiedHTTPSConnection(httplib.HTTPSConnection):
+    def connect(self):
+        # overrides the version in httplib so that we do certificate verification
+        socket_s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        domain_name = re.findall(r'[0-9]+(?:\.[0-9]+){3}', config.options.matomo_url)[0]
+        port = int(re.findall(r':([0-9]+)', config.options.matomo_url)[0])
+        sock = socket_s.connect((domain_name, port))
+
+        if self._tunnel_host:
+            self.sock = sock
+            self._tunnel()
+
+        # wrap the socket using verificaiton with the rool certs in trusted_roots_certs
+        self.sock = ssl.wrap_socket(
+            socket_s,
+            keyfile=config.options.pass_key_file_path,
+            certfile=config.options.pass_cert_file_path,
+            server_side=False,
+            ca_certs=config.options.pass_ca_cert_file_path
+        )
+
+# wraps https connections with ssl certificate verification
+class VerifiedHTTPSHandler(urllib2.HTTPSHandler):
+    def __init__(self, connection_class = VerifiedHTTPSConnection):
+        self.specialized_conn_class = connection_class
+        urllib2.HTTPSHandler.__init__(self)
+    def https_open(self, req):
+        return self.do_open(self.specialized_conn_class, req)
 
 def main():
     """
