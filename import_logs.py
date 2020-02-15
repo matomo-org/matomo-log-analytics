@@ -876,7 +876,6 @@ class Configuration:
         """
         self.options = option_parser.parse_args()
         self.filenames = self.options.file
-        print(self.options)
 
         if self.options.output:
             sys.stdout = sys.stderr = open(self.options.output, 'a+', 0)
