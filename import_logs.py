@@ -875,7 +875,7 @@ class Configuration:
         Parse the command line args and create self.options and self.filenames.
         """
         self.options = option_parser.parse_args()
-        self.filenames=self.options.file
+        self.filenames = self.options.file
         print(self.options)
 
         if self.options.output:
