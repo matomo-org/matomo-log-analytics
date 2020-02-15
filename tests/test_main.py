@@ -354,7 +354,7 @@ def check_iis_groups(groups):
                                'status', 'length', 'host', 'userid', 'generation_time_milli',
                                '__win32_status', 'cookie', 'method']
 
-    for property_name in list(groups.keys()):
+    for property_name in groups.keys():
         assert property_name in expected_hit_properties
 
 def check_s3_groups(groups):
