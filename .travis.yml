@@ -4,11 +4,10 @@ python:
   - "3.5"
   - "3.6"
   - "3.7"
-  - "3.8-dev"
+  - "3.8"
 
 sudo: false
 
 script:
   - cd tests
   - ./run_tests.sh
-
