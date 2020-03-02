@@ -585,6 +585,45 @@ def test_shoutcast_parsing():
     assert hits[0]['user_agent'] == u'NSPlayer/10.0.0.3702 WMFSDK/10.0'
     assert hits[0]['length'] == 65580
 
+def test_splitted_date_and_time_parsing():
+    """test parsing of logs with splitted date and time"""
+
+    file_ = 'logs/splitted_date_and_time.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == u'/stream'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['args'] == {}
+    assert hits[0]['generation_time_milli'] == 1000.0
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/splitted_date_and_time.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2015, 12, 7, 10, 37, 5)
+    assert hits[0]['lineno'] == 1
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[0]['query_string'] == u'title=UKR%20Nights'
+    assert hits[0]['path'] == u'/stream'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/stream?title=UKR%20Nights'
+    assert hits[0]['user_agent'] == u'NSPlayer/10.0.0.3702 WMFSDK/10.0'
+    assert hits[0]['length'] == 65580
+
 def test_elb_parsing():
     """test parsing of elb logs"""
 
