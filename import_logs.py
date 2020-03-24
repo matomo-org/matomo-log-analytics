@@ -758,7 +758,7 @@ class Configuration(object):
             '--w3c-fields', dest='w3c_fields', default=None,
             help="Specify the '#Fields:' line for a log file in the W3C Extended log file format. Use this option if "
                  "your log file doesn't contain the '#Fields:' line which is required for parsing. This option must be used "
-                 "in conjuction with --log-format-name=w3c_extended.\n"
+                 "in conjunction with --log-format-name=w3c_extended.\n"
                  "Example: --w3c-fields='#Fields: date time c-ip ...'"
         )
         option_parser.add_option(
@@ -1154,7 +1154,7 @@ class Statistics(object):
         self.count_lines_static = self.Counter()
         # Ignored user-agents.
         self.count_lines_skipped_user_agent = self.Counter()
-        # Ignored HTTP erors.
+        # Ignored HTTP errors.
         self.count_lines_skipped_http_errors = self.Counter()
         # Ignored HTTP redirects.
         self.count_lines_skipped_http_redirects = self.Counter()
@@ -2322,7 +2322,7 @@ class Parser(object):
             print('Parsing log %s...' % filename)
 
         if config.format:
-            # The format was explicitely specified.
+            # The format was explicitly specified.
             format = config.format
 
             if isinstance(format, W3cExtendedFormat):
@@ -2521,7 +2521,7 @@ class Parser(object):
                 invalid_line(line, 'invalid date or invalid format: %s' % str(e))
                 continue
 
-            # Parse timezone and substract its value from the date
+            # Parse timezone and subtract its value from the date
             try:
                 timezone = float(format.get('timezone'))
             except BaseFormatException:

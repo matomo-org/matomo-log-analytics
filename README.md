@@ -234,7 +234,7 @@ Just needed to configure the best params for import_logs.py, file `/usr/local/ma
 
 ##### Example of regex for syslog format (centralized logs)
 
-###### log format exemple
+###### log format example
 
 ```
 Aug 31 23:59:59 tt-srv-name www.tt.com: 1.1.1.1 - - [31/Aug/2014:23:59:59 +0200] "GET /index.php HTTP/1.0" 200 3838 "http://www.tt.com/index.php" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0" 365020 www.tt.com
