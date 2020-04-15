@@ -1012,9 +1012,11 @@ class Configuration(object):
 
             logging.debug('Using credentials: (login = %s, password = %s)', matomo_login, matomo_password)
             try:
-                api_result = matomo.call_api('UsersManager.getTokenAuth',
+                api_result = matomo.call_api('UsersManager.createAppSpecificTokenAuth',
                     userLogin=matomo_login,
                     md5Password=matomo_password,
+                    description='Log importer',
+                    expireHours='48',
                     _token_auth='',
                     _url=self.options.matomo_api_url,
                 )
