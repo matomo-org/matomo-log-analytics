@@ -1008,13 +1008,13 @@ class Configuration(object):
 
         if self.options.login and self.options.password:
             matomo_login = self.options.login
-            matomo_password = hashlib.md5(self.options.password).hexdigest()
+            matomo_password = self.options.password
 
-            logging.debug('Using credentials: (login = %s, password = %s)', matomo_login, matomo_password)
+            logging.debug('Using credentials: (login = %s, using password = %s)', matomo_login, 'YES' if matomo_password else 'NO')
             try:
                 api_result = matomo.call_api('UsersManager.createAppSpecificTokenAuth',
                     userLogin=matomo_login,
-                    md5Password=matomo_password,
+                    passwordConfirmation=matomo_password,
                     description='Log importer',
                     expireHours='48',
                     _token_auth='',
@@ -1495,7 +1495,7 @@ class Matomo(object):
         """
         args = {
             'module' : 'API',
-            'format' : 'json2',
+            'format' : 'json',
             'method' : method,
             'filter_limit' : '-1',
         }
