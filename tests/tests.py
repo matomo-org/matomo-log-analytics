@@ -251,7 +251,6 @@ def test_replay_tracking_arguments():
     assert hits[0]['fla'] == '1'
     assert hits[0]['pdf'] == '1'
     assert hits[0]['_id'] == '1da79fc743e8bcc4'
-    assert hits[0]['dir'] == '1'
     assert hits[0]['_refts'] == '1360047661'
 
     assert hits[1]['_idn'] == '0'
@@ -278,7 +277,6 @@ def test_replay_tracking_arguments():
     assert hits[1]['fla'] == '1'
     assert hits[1]['pdf'] == '1'
     assert hits[1]['_id'] == '1da79fc743e8bcc4'
-    assert hits[1]['dir'] == '1'
     assert hits[1]['_refts'] == '1360047661'
 
     assert hits[2]['_idn'] == '0'
@@ -305,7 +303,6 @@ def test_replay_tracking_arguments():
     assert hits[2]['fla'] == '1'
     assert hits[2]['pdf'] == '1'
     assert hits[2]['_id'] == '1da79fc743e8bcc4'
-    assert hits[2]['dir'] == '1'
     assert hits[2]['_refts'] == '1360047661'
 
 def parse_log_file_line(format_name, file_):
