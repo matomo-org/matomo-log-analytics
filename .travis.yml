@@ -1,9 +1,10 @@
 language: python
-
+dist: xenial
 python:
-  - "2.6"
-  - "2.7"
-  # 3.0 is not supported
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 
 sudo: false
 
@@ -12,4 +13,3 @@ dist: trusty
 script:
   - cd tests
   - ./run_tests.sh
-
