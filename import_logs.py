@@ -2281,7 +2281,7 @@ class Parser:
                     open_func = gzip.open
                 else:
                     open_func = open
-                file = open_func(filename, 'r')
+                    file = open_func(filename, mode='r', encoding=config.options.encoding)
 
         if config.options.show_progress:
             print(('Parsing log %s...' % filename))
@@ -2503,11 +2503,7 @@ class Parser:
                     invalid_line(line, 'missing idsite')
                     continue
 
-                try:
-                    hit.args.update((k, v.pop().encode('raw_unicode_escape').decode(config.options.encoding)) for k, v in query_arguments.items())
-                except UnicodeDecodeError:
-                    invalid_line(line, 'invalid encoding')
-                    continue
+                hit.args.update((k, v.pop()) for k, v in query_arguments.items())
 
             (is_filtered, reason) = self.is_filtered(hit)
             if is_filtered:
