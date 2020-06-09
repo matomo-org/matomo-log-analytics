@@ -797,6 +797,24 @@ def test_amazon_cloudfront_rtmp_parsing():
 
     assert len(hits) == 2
 
+def test_log_file_with_random_encoding():
+    """Test that other file encoding work."""
+
+    file_ = 'logs/common_encoding_big5.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.debug = True
+    import_logs.config.options.encoding = 'big5'
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['path'] == '/為其兼行惡道'
+
+
 def test_ignore_groups_option_removes_groups():
     """Test that the --ignore-groups option removes groups so they do not appear in hits."""
 

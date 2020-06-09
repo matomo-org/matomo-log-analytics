@@ -24,6 +24,7 @@ if sys.version_info[0] != 3:
 import base64
 import bz2
 import configparser
+import codecs
 import datetime
 import fnmatch
 import gzip
@@ -2281,7 +2282,7 @@ class Parser:
                     open_func = gzip.open
                 else:
                     open_func = open
-                    file = open_func(filename, mode='r', encoding=config.options.encoding)
+                    file = open_func(filename, mode='r', encoding=config.options.encoding, errors="surrogateescape")
 
         if config.options.show_progress:
             print(('Parsing log %s...' % filename))
