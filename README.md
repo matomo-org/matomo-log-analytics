@@ -4,10 +4,10 @@ Import your server logs in Matomo with this powerful and easy to use tool.
 
 ## Requirements
 
-* Python 2.6 or 2.7. Python 3.x is not supported.
-* Matomo >= 2.14.0
+* Python 3.5, 3.6 or 3.7.
+* Matomo >= 4.0.0
 
-Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=master)](https://travis-ci.org/matomo-org/matomo-log-analytics)
+Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=4.x-dev)](https://travis-ci.org/matomo-org/matomo-log-analytics)
 
 ## Supported log formats
 
@@ -30,7 +30,7 @@ We're looking for contributors! Feel free to submit Pull requests on Github.
 The Log Analytics importer is designed to detect and import into Matomo as many log files as possible. Help us add your log formats!
 
  * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
- * Add a new test in [tests/tests.py](https://github.com/matomo-org/matomo-log-analytics/blob/master/tests/tests.py),
+ * Add a new test in [tests/test_main.py](https://github.com/matomo-org/matomo-log-analytics/blob/4.x-dev/tests/test_main.py),
  * Test that the logs are imported successfully as you expected (`tests/run_tests.sh`),
  * Open a Pull Request,
  * Check the test you have added works (the build should be green),
