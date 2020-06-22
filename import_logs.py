@@ -66,7 +66,11 @@ except ImportError:
 ##
 
 STATIC_EXTENSIONS = set((
-    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml robots.txt webp'
+    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp'
+).split())
+
+STATIC_FILES = set((
+    'robots.txt'
 ).split())
 
 DOWNLOAD_EXTENSIONS = set((
@@ -208,6 +212,9 @@ class RegexFormat(BaseFormat):
         match_result = self.regex.match(line)
         if match_result:
             self.matched = match_result.groupdict()
+            if 'time' in self.matched:
+                self.matched['date'] = self.matched['date'] + ' ' + self.matched['time']
+                del self.matched['time']
         else:
             self.matched = None
         return match_result
@@ -230,8 +237,8 @@ class W3cExtendedFormat(RegexFormat):
     FIELDS_LINE_PREFIX = '#Fields: '
 
     fields = {
-        'date': r'(?P<date>\d+[-\d+]+',
-        'time': r'[\d+:]+)[.\d]*?', # TODO should not assume date & time will be together not sure how to fix ATM.
+        'date': r'"?(?P<date>\d+[-\d+]+)"?',
+        'time': r'"?(?P<time>[\d+:]+)[.\d]*?"?',
         'cs-uri-stem': r'(?P<path>/\S*)',
         'cs-uri-query': r'(?P<query_string>\S*)',
         'c-ip': r'"?(?P<ip>[\w*.:-]*)"?',
@@ -404,7 +411,7 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
             return '200'
         elif key == 'user_agent':
             user_agent = super(AmazonCloudFrontFormat, self).get(key)
-            return urllib2.unquote(user_agent)
+            return urllib2.unquote(urllib2.unquote(user_agent))  # Value is double quoted!
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
@@ -856,10 +863,8 @@ class Configuration(object):
         if not re.match('[-+][0-9]{4}', timezone):
             fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
 
-        timezone = float(timezone)
-
         date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
-        date -= datetime.timedelta(hours=timezone/100)
+        date -= TimeHelper.timedelta_from_timezone(timezone)
 
         setattr(parser.values, option_attr_name, date)
 
@@ -1061,7 +1066,7 @@ class Configuration(object):
                 command.append('--testmode')
 
             hostname = urlparse.urlparse( self.options.matomo_url ).hostname
-            command.append('--piwik-domain=' + hostname )
+            command.append('--matomo-domain=' + hostname )
 
             command = subprocess.list2cmdline(command)
 
@@ -1325,6 +1330,19 @@ Processing your log data
 
     def stop_monitor(self):
         self.monitor_stop = True
+
+class TimeHelper(object):
+
+    @staticmethod
+    def timedelta_from_timezone(timezone):
+        timezone = int(timezone)
+        sign = 1 if timezone >= 0 else -1
+        n = abs(timezone)
+
+        hours = n / 100 * sign
+        minutes = n % 100 * sign
+
+        return datetime.timedelta(hours=hours, minutes=minutes)
 
 class UrlHelper(object):
 
@@ -2101,7 +2119,9 @@ class Parser(object):
         return result
 
     def check_static(self, hit):
-        if hit.extension in STATIC_EXTENSIONS:
+        filename = hit.path.split('/')[-1]
+
+        if hit.extension in STATIC_EXTENSIONS or filename in STATIC_FILES:
             if config.options.enable_static:
                 hit.is_download = True
                 return True
@@ -2514,15 +2534,14 @@ class Parser(object):
 
             # Parse timezone and substract its value from the date
             try:
-                timezone = float(format.get('timezone'))
+                timezone = format.get('timezone')
+                if timezone:
+                    hit.date -= TimeHelper.timedelta_from_timezone(timezone)
             except BaseFormatException:
-                timezone = 0
+                pass
             except ValueError:
                 invalid_line(line, 'invalid timezone')
                 continue
-
-            if timezone:
-                hit.date -= datetime.timedelta(hours=timezone/100)
 
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
