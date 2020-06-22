@@ -575,7 +575,7 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--show-progress', dest='show_progress',
-            action='store_true', default=os.isatty(sys.stdout.fileno()),
+            action='store_true', default=hasattr(sys.stdout, 'fileno') and os.isatty(sys.stdout.fileno()),
             help="Print a progress report X seconds (default: 1, use --show-progress-delay to override)"
         )
         option_parser.add_option(
@@ -931,11 +931,14 @@ class Configuration(object):
 
         getattr(parser.values, option_attr_name)[key] = value
 
-    def _parse_args(self, option_parser):
+    def _parse_args(self, option_parser, argv = None):
         """
         Parse the command line args and create self.options and self.filenames.
         """
-        self.options, self.filenames = option_parser.parse_args(sys.argv[1:])
+        if not argv:
+            argv = sys.argv[1:]
+
+        self.options, self.filenames = option_parser.parse_args(argv)
 
         if self.options.output:
             sys.stdout = sys.stderr = open(self.options.output, 'a+', 0)
@@ -943,10 +946,12 @@ class Configuration(object):
         if not self.filenames:
             print(option_parser.format_help())
             sys.exit(1)
-				
-        if len(self.filenames) == 1 and '*' in self.filenames[0]:
-            self.filenames = glob.glob(self.filenames[0])
-		
+
+        all_filenames = []
+        for self.filename in self.filenames:
+            all_filenames = all_filenames + glob.glob(self.filename)
+        self.filenames = all_filenames
+
         # Configure logging before calling logging.{debug,info}.
         logging.basicConfig(
             format='%(asctime)s: [%(levelname)s] %(message)s',
@@ -1036,8 +1041,8 @@ class Configuration(object):
         if self.options.regex_groups_to_ignore:
             self.options.regex_groups_to_ignore = set(self.options.regex_groups_to_ignore.split(','))
 
-    def __init__(self):
-        self._parse_args(self._create_parser())
+    def __init__(self, argv = None):
+        self._parse_args(self._create_parser(), argv)
 
     def _get_token_auth(self):
         """
