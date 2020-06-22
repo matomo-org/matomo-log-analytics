@@ -444,6 +444,11 @@ _OVH_FORMAT = (
     r'\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 
+# We need to double escape the word-boundry to work correctly, because https://docs.python.org/2/reference/lexical_analysis.html#string-literals
+_HAPROXY_FORMAT = (
+    '.*:\ (?P<ip>[\w*.]+).*\[(?P<date>.*)\].*\ (?P<status>\\b\d{3}\\b)\ (?P<length>\d+)\ -.*\"(?P<method>\S+)\ (?P<path>\S+).*'
+)
+
 FORMATS = {
     'common': RegexFormat('common', _COMMON_LOG_FORMAT),
     'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
@@ -457,7 +462,8 @@ FORMATS = {
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
-    'ovh': RegexFormat('ovh', _OVH_FORMAT)
+    'ovh': RegexFormat('ovh', _OVH_FORMAT),
+    'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f')
 }
 
 ##
