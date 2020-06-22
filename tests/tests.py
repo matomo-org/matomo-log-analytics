@@ -214,6 +214,35 @@ class Recorder(object):
     def add_hits(cls, hits):
         cls.recorders.extend(hits)
 
+def test_replay_tracking_seconds_to_add_to_date():
+    """Test data parsing from sample log file."""
+    file_ = 'logs/logs_to_tests.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.seconds_to_add_to_date = 3600
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    hits = [hit.args for hit in import_logs.Recorder.recorders]
+
+    assert hits[0]['_idts'] == 1360047661 + 3600
+    assert hits[0]['_viewts'] == 1360047661 + 3600
+    assert hits[0]['_refts'] == 1360047661 + 3600
+    assert hits[0]['_ects'] == 1360047634 + 3600
+
+    assert hits[1]['_idts'] == 1360047661 + 3600
+    assert hits[1]['_viewts'] == 1360047661 + 3600
+    assert hits[1]['_refts'] == 1360047661 + 3600
+    assert hits[1]['_ects'] == 1360047534 + 3600
+
+    assert hits[2]['_idts'] == 1360047661 + 3600
+    assert hits[2]['_viewts'] == 1360047661 + 3600
+    assert hits[2]['_refts'] == 1360047661 + 3600
+    assert hits[2]['_ects'] == 1360047614 + 3600
+
 def test_replay_tracking_arguments():
     """Test data parsing from sample log file."""
     file_ = 'logs/logs_to_tests.log'
