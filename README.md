@@ -13,7 +13,7 @@ Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/m
 
 
 The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
- * all default log formats for: Nginx, Apache, IIS, Tomcat
+ * all default log formats for: Nginx, Apache, IIS, Tomcat, Haproxy
  * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON, OVH
  * log files of some popular Cloud services: Amazon AWS CloudFront logs, AWS S3 logs, AWS ELB logs.
  * streaming media server log files such as: Icecast
@@ -71,7 +71,7 @@ If you wish to track all requests the following command would be used:
   log importer interprets the field correctly.
 
 * Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
-  Those log formats are: OVH
+  Those log formats are: OVH (ovh), Incapsula W3C (incapsula_w3c)
 
 ## How to import your logs automatically every day?
 
