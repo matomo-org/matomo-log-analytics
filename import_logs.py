@@ -863,10 +863,8 @@ class Configuration(object):
         if not re.match('[-+][0-9]{4}', timezone):
             fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
 
-        timezone = float(timezone)
-
         date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
-        date -= datetime.timedelta(hours=timezone/100)
+        date -= TimeHelper.timedelta_from_timezone(timezone)
 
         setattr(parser.values, option_attr_name, date)
 
@@ -1332,6 +1330,19 @@ Processing your log data
 
     def stop_monitor(self):
         self.monitor_stop = True
+
+class TimeHelper(object):
+
+    @staticmethod
+    def timedelta_from_timezone(timezone):
+        timezone = int(timezone)
+        sign = 1 if timezone >= 0 else -1
+        n = abs(timezone)
+
+        hours = n / 100 * sign
+        minutes = n % 100 * sign
+
+        return datetime.timedelta(hours=hours, minutes=minutes)
 
 class UrlHelper(object):
 
@@ -2523,15 +2534,14 @@ class Parser(object):
 
             # Parse timezone and substract its value from the date
             try:
-                timezone = float(format.get('timezone'))
+                timezone = format.get('timezone')
+                if timezone:
+                    hit.date -= TimeHelper.timedelta_from_timezone(timezone)
             except BaseFormatException:
-                timezone = 0
+                pass
             except ValueError:
                 invalid_line(line, 'invalid timezone')
                 continue
-
-            if timezone:
-                hit.date -= datetime.timedelta(hours=timezone/100)
 
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
