@@ -114,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'incapsula_w3c':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name)
@@ -160,46 +160,49 @@ def test_format_detection():
 
 class Options(object):
     """Mock config options necessary to run checkers from Parser class."""
-    debug = False
-    encoding = 'utf-8'
-    log_hostname = 'foo'
-    query_string_delimiter = '?'
-    piwik_token_auth = False
-    piwik_url = 'http://example.com'
-    recorder_max_payload_size = 200
-    replay_tracking = True
-    show_progress = False
-    skip = False
-    hostnames = []
-    excluded_paths = []
-    excluded_useragents = []
-    enable_bots = []
-    force_lowercase_path = False
-    included_paths = []
-    enable_http_errors = False
-    download_extensions = 'doc,pdf'
-    custom_w3c_fields = {}
-    dump_log_regex = False
-    w3c_time_taken_in_millisecs = False
-    w3c_fields = None
-    w3c_field_regexes = {}
-    regex_group_to_visit_cvars_map = {}
-    regex_group_to_page_cvars_map = {}
-    regex_groups_to_ignore = None
-    replay_tracking_expected_tracker_file = 'piwik.php'
-    debug_request_limit = None
-    exclude_host = []
-    include_host = []
-    exclude_older_than = None
-    exclude_newer_than = None
-    track_http_method = True
-    seconds_to_add_to_date = 0
-    request_suffix = None
+    def __init__(self):
+        self.debug = False
+        self.encoding = 'utf-8'
+        self.log_hostname = 'foo'
+        self.query_string_delimiter = '?'
+        self.piwik_token_auth = False
+        self.piwik_url = 'http://example.com'
+        self.recorder_max_payload_size = 200
+        self.replay_tracking = True
+        self.show_progress = False
+        self.skip = False
+        self.hostnames = []
+        self.excluded_paths = []
+        self.excluded_useragents = []
+        self.enable_bots = []
+        self.force_lowercase_path = False
+        self.included_paths = []
+        self.enable_http_errors = False
+        self.download_extensions = 'doc,pdf'
+        self.custom_w3c_fields = {}
+        self.dump_log_regex = False
+        self.w3c_time_taken_in_millisecs = False
+        self.w3c_fields = None
+        self.w3c_field_regexes = {}
+        self.regex_group_to_visit_cvars_map = {}
+        self.regex_group_to_page_cvars_map = {}
+        self.regex_groups_to_ignore = None
+        self.replay_tracking_expected_tracker_file = 'piwik.php'
+        self.debug_request_limit = None
+        self.exclude_host = []
+        self.include_host = []
+        self.exclude_older_than = None
+        self.exclude_newer_than = None
+        self.track_http_method = True
+        self.seconds_to_add_to_date = 0
+        self.request_suffix = None
 
 class Config(object):
     """Mock configuration."""
-    options = Options()
-    format = import_logs.FORMATS['ncsa_extended']
+
+    def __init__(self):
+        self.options = Options()
+        self.format = import_logs.FORMATS['ncsa_extended']
 
 class Resolver(object):
     """Mock resolver which doesn't check connection to real piwik."""
@@ -214,6 +217,35 @@ class Recorder(object):
     def add_hits(cls, hits):
         cls.recorders.extend(hits)
 
+def test_replay_tracking_seconds_to_add_to_date():
+    """Test data parsing from sample log file."""
+    file_ = 'logs/logs_to_tests.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.seconds_to_add_to_date = 3600
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    hits = [hit.args for hit in import_logs.Recorder.recorders]
+
+    assert hits[0]['_idts'] == 1360047661 + 3600
+    assert hits[0]['_viewts'] == 1360047661 + 3600
+    assert hits[0]['_refts'] == 1360047661 + 3600
+    assert hits[0]['_ects'] == 1360047634 + 3600
+
+    assert hits[1]['_idts'] == 1360047661 + 3600
+    assert hits[1]['_viewts'] == 1360047661 + 3600
+    assert hits[1]['_refts'] == 1360047661 + 3600
+    assert hits[1]['_ects'] == 1360047534 + 3600
+
+    assert hits[2]['_idts'] == 1360047661 + 3600
+    assert hits[2]['_viewts'] == 1360047661 + 3600
+    assert hits[2]['_refts'] == 1360047661 + 3600
+    assert hits[2]['_ects'] == 1360047614 + 3600
+
 def test_replay_tracking_arguments():
     """Test data parsing from sample log file."""
     file_ = 'logs/logs_to_tests.log'
@@ -221,7 +253,7 @@ def test_replay_tracking_arguments():
     import_logs.stats = import_logs.Statistics()
     import_logs.config = Config()
     import_logs.resolver = Resolver()
-    import_logs.Recorder = Recorder()
+    Recorder.recorders = []
     import_logs.parser = import_logs.Parser()
     import_logs.parser.parse(file_)
 
@@ -398,6 +430,14 @@ def check_match_groups(format_name, groups):
 
 def check_ovh_groups(groups):
     check_common_complete_groups(groups)
+
+def check_haproxy_groups(groups):
+    assert groups['ip'] == '4.3.2.1'
+    assert groups['date'] == '25/Sep/2018:06:05:27.584'
+    assert groups['path'] == '/user/'
+    assert groups['status'] == '200'
+    assert groups['length'] == '7456'
+    assert groups['method'] == 'POST'
 
 # parsing tests
 def test_format_parsing():
@@ -1046,6 +1086,23 @@ def test_urlhelper_convert_array_args():
     f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
     f.description = 'with multiple inconsistent data strucutres'
     yield f
+
+# TimeHelper tests
+def test_timedelta_from_timezone():
+    def _test(input, expected):
+        delta = import_logs.TimeHelper.timedelta_from_timezone(input)
+        assert delta == datetime.timedelta(0, expected)
+
+    _test('+0200', 7200)
+    _test('+1400', 50400)
+    _test('+0045', 2700)
+    _test('+0330', 12600)
+    _test('+0000', 0)
+    _test('-0500', -18000)
+    _test('-1200', -43200)
+    _test('-0040', -2400)
+    _test('-0230', -9000)
+    _test('-0000', 0)
 
 # Matomo error test
 def test_matomo_error_construct():

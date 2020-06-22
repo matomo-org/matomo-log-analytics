@@ -475,6 +475,11 @@ _OVH_FORMAT = (
     r'\s+"(?P<referrer>.*?)"\s+"(?P<user_agent>.*?)"'
 )
 
+# We need to double escape the word-boundry to work correctly, because https://docs.python.org/2/reference/lexical_analysis.html#string-literals
+_HAPROXY_FORMAT = (
+    '.*:\ (?P<ip>[\w*.]+).*\[(?P<date>.*)\].*\ (?P<status>\\b\d{3}\\b)\ (?P<length>\d+)\ -.*\"(?P<method>\S+)\ (?P<path>\S+).*'
+)
+
 FORMATS = {
     'common': RegexFormat('common', _COMMON_LOG_FORMAT),
     'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
@@ -489,7 +494,8 @@ FORMATS = {
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
-    'ovh': RegexFormat('ovh', _OVH_FORMAT)
+    'ovh': RegexFormat('ovh', _OVH_FORMAT),
+    'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f')
 }
 
 ##
@@ -895,10 +901,8 @@ class Configuration(object):
         if not re.match('[-+][0-9]{4}', timezone):
             fatal_error("Invalid date value '%s': expected valid timzeone like +0100 or -1200, got '%s'" % (value, timezone))
 
-        timezone = float(timezone)
-
         date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
-        date -= datetime.timedelta(hours=timezone/100)
+        date -= TimeHelper.timedelta_from_timezone(timezone)
 
         setattr(parser.values, option_attr_name, date)
 
@@ -1364,6 +1368,19 @@ Processing your log data
 
     def stop_monitor(self):
         self.monitor_stop = True
+
+class TimeHelper(object):
+
+    @staticmethod
+    def timedelta_from_timezone(timezone):
+        timezone = int(timezone)
+        sign = 1 if timezone >= 0 else -1
+        n = abs(timezone)
+
+        hours = n / 100 * sign
+        minutes = n % 100 * sign
+
+        return datetime.timedelta(hours=hours, minutes=minutes)
 
 class UrlHelper(object):
 
@@ -2555,15 +2572,14 @@ class Parser(object):
 
             # Parse timezone and substract its value from the date
             try:
-                timezone = float(format.get('timezone'))
+                timezone = format.get('timezone')
+                if timezone:
+                    hit.date -= TimeHelper.timedelta_from_timezone(timezone)
             except BaseFormatException:
-                timezone = 0
+                pass
             except ValueError:
                 invalid_line(line, 'invalid timezone')
                 continue
-
-            if timezone:
-                hit.date -= datetime.timedelta(hours=timezone/100)
 
             if config.options.replay_tracking:
                 # we need a query string and we only consider requests with piwik.php
@@ -2581,6 +2597,11 @@ class Parser(object):
                 except UnicodeDecodeError:
                     invalid_line(line, 'invalid encoding')
                     continue
+
+                if config.options.seconds_to_add_to_date:
+                    for param in ['_idts', '_viewts', '_ects', '_refts']:
+                        if param in hit.args:
+                            hit.args[param] = int(hit.args[param]) + config.options.seconds_to_add_to_date
 
             (is_filtered, reason) = self.is_filtered(hit)
             if is_filtered:
