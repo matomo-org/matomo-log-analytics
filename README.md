@@ -71,7 +71,7 @@ If you wish to track all requests the following command would be used:
   log importer interprets the field correctly.
 
 * Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
-  Those log formats are: OVH
+  Those log formats are: OVH (ovh), Incapsula W3C (incapsula_w3c)
 
 ## How to import your logs automatically every day?
 

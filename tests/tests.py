@@ -114,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name)
@@ -453,7 +453,7 @@ def test_format_parsing():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by IIS and netscaler logs; amazon cloudfront tested individually
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
@@ -788,6 +788,69 @@ def test_ovh_parsing():
 
     import_logs.config.options.log_hostname = 'foo'
 
+def test_incapsulaw3c_parsing():
+    """test parsing of incapsula w3c logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/incapsula_w3c.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['incapsula_w3c']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == 'php'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == u''
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[0]['length'] == 10117
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/incapsula_w3c.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2017, 6, 28, 07, 26, 35)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == u'123.123.123.123'
+    assert hits[0]['query_string'] == u'variable=test'
+    assert hits[0]['path'] == u'/page.php'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/page.php'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+
+    assert hits[1]['status'] == u'200'
+    assert hits[1]['userid'] == None
+    assert hits[1]['is_error'] == False
+    assert hits[1]['extension'] == '/rss/news'
+    assert hits[1]['is_download'] == False
+    assert hits[1]['referrer'] == u''
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[1]['length'] == 0
+    assert hits[1]['generation_time_milli'] == 0
+    assert hits[1]['host'] == 'www.example.com'
+    assert hits[1]['filename'] == 'logs/incapsula_w3c.log'
+    assert hits[1]['is_redirect'] == False
+    assert hits[1]['date'] == datetime.datetime(2017, 6, 26, 18, 21, 17)
+    assert hits[1]['lineno'] == 1
+    assert hits[1]['ip'] == u'125.125.125.125'
+    assert hits[1]['query_string'] == u''
+    assert hits[1]['path'] == '/rss/news'
+    assert hits[1]['is_robot'] == False
+    assert hits[1]['full_path'] == u'/rss/news'
+    assert hits[1]['user_agent'] == u'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:45.0) Gecko/20100101 Thunderbird/45.8.0 Lightning/4.7.8'
+
+    assert len(hits) == 2
+
 def test_amazon_cloudfront_rtmp_parsing():
     """test parsing of amazon cloudfront rtmp logs (which use extended W3C log format w/ custom fields for event info)"""
 
@@ -799,6 +862,7 @@ def test_amazon_cloudfront_rtmp_parsing():
     import_logs.parser = import_logs.Parser()
     import_logs.config.format = None
     import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.log_hostname = 'foo'
     import_logs.config.options.enable_http_errors = True
     import_logs.config.options.replay_tracking = False
     import_logs.config.options.w3c_time_taken_in_millisecs = False
