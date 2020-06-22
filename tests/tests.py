@@ -1056,6 +1056,19 @@ def test_static_ignores():
 
     assert len(hits) == 1
 
+def test_glob_filenames():
+    """Test globbing of filenames"""
+    argv = ["--url=http://localhost", "logs/common*.log", "logs/elb.log"]
+
+    config = import_logs.Configuration(argv)
+
+    filenames = sorted(config.filenames)
+    assert len(filenames) == 4
+    assert filenames[0] == 'logs/common.log'
+    assert filenames[1] == 'logs/common_complete.log'
+    assert filenames[2] == 'logs/common_vhost.log'
+    assert filenames[3] == 'logs/elb.log'
+
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
     def _test(input, expected):
