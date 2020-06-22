@@ -1062,11 +1062,12 @@ def test_glob_filenames():
 
     config = import_logs.Configuration(argv)
 
-    assert len(config.filenames) == 4
-    assert config.filenames[0] == 'logs/common.log'
-    assert config.filenames[1] == 'logs/common_complete.log'
-    assert config.filenames[2] == 'logs/common_vhost.log'
-    assert config.filenames[3] == 'logs/elb.log'
+    filenames = sorted(config.filenames)
+    assert len(filenames) == 4
+    assert filenames[0] == 'logs/common.log'
+    assert filenames[1] == 'logs/common_complete.log'
+    assert filenames[2] == 'logs/common_vhost.log'
+    assert filenames[3] == 'logs/elb.log'
 
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
