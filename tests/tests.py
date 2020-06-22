@@ -3,6 +3,7 @@ import functools
 import os
 import datetime
 import re
+import json
 
 import import_logs
 
@@ -113,7 +114,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name)
@@ -159,39 +160,49 @@ def test_format_detection():
 
 class Options(object):
     """Mock config options necessary to run checkers from Parser class."""
-    debug = False
-    encoding = 'utf-8'
-    log_hostname = 'foo'
-    query_string_delimiter = '?'
-    piwik_token_auth = False
-    piwik_url = 'http://example.com'
-    recorder_max_payload_size = 200
-    replay_tracking = True
-    show_progress = False
-    skip = False
-    hostnames = []
-    excluded_paths = []
-    excluded_useragents = []
-    enable_bots = []
-    force_lowercase_path = False
-    included_paths = []
-    enable_http_errors = False
-    download_extensions = 'doc,pdf'
-    custom_w3c_fields = {}
-    dump_log_regex = False
-    w3c_time_taken_in_millisecs = False
-    w3c_fields = None
-    w3c_field_regexes = {}
-    regex_group_to_visit_cvars_map = {}
-    regex_group_to_page_cvars_map = {}
-    regex_groups_to_ignore = None
-    replay_tracking_expected_tracker_file = 'piwik.php'
-    debug_request_limit = None
+    def __init__(self):
+        self.debug = False
+        self.encoding = 'utf-8'
+        self.log_hostname = 'foo'
+        self.query_string_delimiter = '?'
+        self.piwik_token_auth = False
+        self.piwik_url = 'http://example.com'
+        self.recorder_max_payload_size = 200
+        self.replay_tracking = True
+        self.show_progress = False
+        self.skip = False
+        self.hostnames = []
+        self.excluded_paths = []
+        self.excluded_useragents = []
+        self.enable_bots = []
+        self.force_lowercase_path = False
+        self.included_paths = []
+        self.enable_http_errors = False
+        self.download_extensions = 'doc,pdf'
+        self.custom_w3c_fields = {}
+        self.dump_log_regex = False
+        self.w3c_time_taken_in_millisecs = False
+        self.w3c_fields = None
+        self.w3c_field_regexes = {}
+        self.regex_group_to_visit_cvars_map = {}
+        self.regex_group_to_page_cvars_map = {}
+        self.regex_groups_to_ignore = None
+        self.replay_tracking_expected_tracker_file = 'piwik.php'
+        self.debug_request_limit = None
+        self.exclude_host = []
+        self.include_host = []
+        self.exclude_older_than = None
+        self.exclude_newer_than = None
+        self.track_http_method = True
+        self.seconds_to_add_to_date = 0
+        self.request_suffix = None
 
 class Config(object):
     """Mock configuration."""
-    options = Options()
-    format = import_logs.FORMATS['ncsa_extended']
+
+    def __init__(self):
+        self.options = Options()
+        self.format = import_logs.FORMATS['ncsa_extended']
 
 class Resolver(object):
     """Mock resolver which doesn't check connection to real piwik."""
@@ -206,6 +217,35 @@ class Recorder(object):
     def add_hits(cls, hits):
         cls.recorders.extend(hits)
 
+def test_replay_tracking_seconds_to_add_to_date():
+    """Test data parsing from sample log file."""
+    file_ = 'logs/logs_to_tests.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.seconds_to_add_to_date = 3600
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    hits = [hit.args for hit in import_logs.Recorder.recorders]
+
+    assert hits[0]['_idts'] == 1360047661 + 3600
+    assert hits[0]['_viewts'] == 1360047661 + 3600
+    assert hits[0]['_refts'] == 1360047661 + 3600
+    assert hits[0]['_ects'] == 1360047634 + 3600
+
+    assert hits[1]['_idts'] == 1360047661 + 3600
+    assert hits[1]['_viewts'] == 1360047661 + 3600
+    assert hits[1]['_refts'] == 1360047661 + 3600
+    assert hits[1]['_ects'] == 1360047534 + 3600
+
+    assert hits[2]['_idts'] == 1360047661 + 3600
+    assert hits[2]['_viewts'] == 1360047661 + 3600
+    assert hits[2]['_refts'] == 1360047661 + 3600
+    assert hits[2]['_ects'] == 1360047614 + 3600
+
 def test_replay_tracking_arguments():
     """Test data parsing from sample log file."""
     file_ = 'logs/logs_to_tests.log'
@@ -213,7 +253,7 @@ def test_replay_tracking_arguments():
     import_logs.stats = import_logs.Statistics()
     import_logs.config = Config()
     import_logs.resolver = Resolver()
-    import_logs.Recorder = Recorder()
+    Recorder.recorders = []
     import_logs.parser = import_logs.Parser()
     import_logs.parser.parse(file_)
 
@@ -353,7 +393,7 @@ def check_iis_groups(groups):
 
     expected_hit_properties = ['date', 'path', 'query_string', 'ip', 'referrer', 'user_agent',
                                'status', 'length', 'host', 'userid', 'generation_time_milli',
-                               '__win32_status', 'cookie']
+                               '__win32_status', 'cookie', 'method']
 
     for property_name in groups.keys():
         assert property_name in expected_hit_properties
@@ -363,6 +403,7 @@ def check_s3_groups(groups):
     assert groups['date'] == '10/Feb/2012:16:42:07'
     assert groups['timezone'] == '-0500'
     assert groups['ip'] == '1.2.3.4'
+    assert groups['userid'] == 'arn:aws:iam::179580289999:user/phillip.boss'
     assert groups['path'] == '/index'
     assert groups['status'] == '200'
     assert groups['length'] == '368'
@@ -387,6 +428,17 @@ def check_match_groups(format_name, groups):
     check_function = symbols['check_' + format_name + '_groups']
     return check_function(groups)
 
+def check_ovh_groups(groups):
+    check_common_complete_groups(groups)
+
+def check_haproxy_groups(groups):
+    assert groups['ip'] == '4.3.2.1'
+    assert groups['date'] == '25/Sep/2018:06:05:27.584'
+    assert groups['path'] == '/user/'
+    assert groups['status'] == '200'
+    assert groups['length'] == '7456'
+    assert groups['method'] == 'POST'
+
 # parsing tests
 def test_format_parsing():
     # test format regex parses correctly
@@ -401,7 +453,7 @@ def test_format_parsing():
 
     for format_name in import_logs.FORMATS.iterkeys():
         # w3c extended tested by IIS and netscaler logs; amazon cloudfront tested individually
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'shoutcast' or format_name == 'elb' or format_name == 'incapsula_w3c':
             continue
 
         f = functools.partial(_test, format_name, 'logs/' + format_name + '.log')
@@ -444,7 +496,7 @@ def test_iis_custom_format():
     assert hits[0]['extension'] == u'/products/theproduct'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == u'http://example.com/Search/SearchResults.pg?informationRecipient.languageCode.c=en'
-    assert hits[0]['args'] == {}
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 109
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/iis_custom.log'
@@ -463,7 +515,7 @@ def test_iis_custom_format():
     assert hits[1]['extension'] == u'/topic/hw43061'
     assert hits[1]['is_download'] == False
     assert hits[1]['referrer'] == ''
-    assert hits[1]['args'] == {}
+    assert hits[1]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[1]['generation_time_milli'] == 0
     assert hits[1]['host'] == 'foo'
     assert hits[1]['filename'] == 'logs/iis_custom.log'
@@ -482,7 +534,7 @@ def test_iis_custom_format():
     assert hits[2]['extension'] == u'/hello/world/6,681965'
     assert hits[2]['is_download'] == False
     assert hits[2]['referrer'] == ''
-    assert hits[2]['args'] == {}
+    assert hits[2]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[2]['generation_time_milli'] == 359
     assert hits[2]['host'] == 'foo'
     assert hits[2]['filename'] == 'logs/iis_custom.log'
@@ -520,7 +572,7 @@ def test_netscaler_parsing():
     assert hits[0]['extension'] == u'jsp'
     assert hits[0]['is_download'] == False
     assert hits[0]['referrer'] == ''
-    assert hits[0]['args'] == {}
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 1000
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/netscaler.log'
@@ -565,6 +617,45 @@ def test_shoutcast_parsing():
     assert hits[0]['is_redirect'] == False
     assert hits[0]['date'] == datetime.datetime(2015, 12, 7, 10, 37, 5)
     assert hits[0]['lineno'] == 3
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[0]['query_string'] == u'title=UKR%20Nights'
+    assert hits[0]['path'] == u'/stream'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/stream?title=UKR%20Nights'
+    assert hits[0]['user_agent'] == u'NSPlayer/10.0.0.3702 WMFSDK/10.0'
+    assert hits[0]['length'] == 65580
+
+def test_splitted_date_and_time_parsing():
+    """test parsing of logs with splitted date and time"""
+
+    file_ = 'logs/splitted_date_and_time.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == u'/stream'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['args'] == {}
+    assert hits[0]['generation_time_milli'] == 1000.0
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/splitted_date_and_time.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2015, 12, 7, 10, 37, 5)
+    assert hits[0]['lineno'] == 1
     assert hits[0]['ip'] == u'1.2.3.4'
     assert hits[0]['query_string'] == u'title=UKR%20Nights'
     assert hits[0]['path'] == u'/stream'
@@ -637,8 +728,8 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['is_error'] == False
     assert hits[0]['extension'] == u'html'
     assert hits[0]['is_download'] == False
-    assert hits[0]['referrer'] == u'www.displaymyfiles.com'
-    assert hits[0]['args'] == {}
+    assert hits[0]['referrer'] == u'https://example.com/'
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
     assert hits[0]['generation_time_milli'] == 1.0
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/amazon_cloudfront_web.log'
@@ -650,9 +741,115 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['path'] == u'/view/my/file.html'
     assert hits[0]['is_robot'] == False
     assert hits[0]['full_path'] == u'/view/my/file.html'
-    assert hits[0]['user_agent'] == u'Mozilla/4.0 (compatible; MSIE 5.0b1; Mac_PowerPC)'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows; U; Windows NT 6.1; de-DE) AppleWebKit/534.17 (KHTML, like Gecko) Chrome/10.0.649.0 Safari/534.17'
 
     assert len(hits) == 1
+
+def test_ovh_parsing():
+    """test parsing of ovh logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/ovh.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['ovh']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'301'
+    assert hits[0]['userid'] == u'theuser'
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == u'/'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == u''
+    assert hits[0]['args'] == {'uid': u'theuser'}
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/ovh.log'
+    assert hits[0]['is_redirect'] == True
+    assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 21, 42, 07)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[0]['query_string'] == ''
+    assert hits[0]['path'] == u'/'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
+
+    assert len(hits) == 1
+
+    import_logs.config.options.log_hostname = 'foo'
+
+def test_incapsulaw3c_parsing():
+    """test parsing of incapsula w3c logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/incapsula_w3c.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['incapsula_w3c']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == 'php'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == u''
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[0]['length'] == 10117
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/incapsula_w3c.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2017, 6, 28, 07, 26, 35)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == u'123.123.123.123'
+    assert hits[0]['query_string'] == u'variable=test'
+    assert hits[0]['path'] == u'/page.php'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == u'/page.php'
+    assert hits[0]['user_agent'] == u'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+
+    assert hits[1]['status'] == u'200'
+    assert hits[1]['userid'] == None
+    assert hits[1]['is_error'] == False
+    assert hits[1]['extension'] == '/rss/news'
+    assert hits[1]['is_download'] == False
+    assert hits[1]['referrer'] == u''
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', u'"GET"']}}
+    assert hits[1]['length'] == 0
+    assert hits[1]['generation_time_milli'] == 0
+    assert hits[1]['host'] == 'www.example.com'
+    assert hits[1]['filename'] == 'logs/incapsula_w3c.log'
+    assert hits[1]['is_redirect'] == False
+    assert hits[1]['date'] == datetime.datetime(2017, 6, 26, 18, 21, 17)
+    assert hits[1]['lineno'] == 1
+    assert hits[1]['ip'] == u'125.125.125.125'
+    assert hits[1]['query_string'] == u''
+    assert hits[1]['path'] == '/rss/news'
+    assert hits[1]['is_robot'] == False
+    assert hits[1]['full_path'] == u'/rss/news'
+    assert hits[1]['user_agent'] == u'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:45.0) Gecko/20100101 Thunderbird/45.8.0 Lightning/4.7.8'
+
+    assert len(hits) == 2
 
 def test_amazon_cloudfront_rtmp_parsing():
     """test parsing of amazon cloudfront rtmp logs (which use extended W3C log format w/ custom fields for event info)"""
@@ -665,6 +862,7 @@ def test_amazon_cloudfront_rtmp_parsing():
     import_logs.parser = import_logs.Parser()
     import_logs.config.format = None
     import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.log_hostname = 'foo'
     import_logs.config.options.enable_http_errors = True
     import_logs.config.options.replay_tracking = False
     import_logs.config.options.w3c_time_taken_in_millisecs = False
@@ -771,7 +969,7 @@ def test_regex_group_to_custom_var_options():
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
     assert hits[0]['args']['_cvar'] == {1: ['The Date', '2012-04-01 00:00:13'], 2: ['User Name', 'theuser']} # check visit custom vars
-    assert hits[0]['args']['cvar'] == {1: ['Geneartion Time', '1687']} # check page custom vars
+    assert hits[0]['args']['cvar'] == {1: ['Geneartion Time', '1687'], 2: ['HTTP-method', 'GET']} # check page custom vars
 
     assert hits[0]['userid'] == 'theuser'
     assert hits[0]['date'] == datetime.datetime(2012, 4, 1, 0, 0, 13)
@@ -837,3 +1035,83 @@ def test_custom_log_date_format_option():
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
     assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 16, 42, 7)
+
+def test_static_ignores():
+    """Test static files are ignored."""
+    file_ = 'logs/static_ignores.log'
+
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.download_extensions = 'txt,doc'  # ensure robots.txt would be imported if not detected as static
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.args for hit in import_logs.Recorder.recorders]
+
+    assert len(hits) == 1
+
+# UrlHelper tests
+def test_urlhelper_convert_array_args():
+    def _test(input, expected):
+        actual = import_logs.UrlHelper.convert_array_args(input)
+        assert json.dumps(actual) == json.dumps(expected)
+
+    f = functools.partial(_test, {'abc': 'def', 'ghi': 23}, {'abc': 'def', 'ghi': 23})
+    f.description = 'without array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[]': 'def', 'ghi': 23}, {'abc': ['def'], 'ghi': 23})
+    f.description = 'with normal array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1]': 'def', 'ghi[0]': 23, 'abc[key2]': 'val2', 'abc[key3][key4]': 'val3'},
+        {'abc': {'key1': 'def', 'key2': 'val2', 'key3': {'key4': 'val3'}}, 'ghi': [23]})
+    f.description = 'with associative array args'
+    yield f
+
+    f = functools.partial(_test, {'abc[0]': 1, 'abc[2]': 2, 'abc[1]': 3, 'ghi[0]': 4, 'ghi[2]': 5}, {'abc': [1, 3, 2], 'ghi': {'0': 4, '2': 5}})
+    f.description = 'with array index keys'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1][0]': 'def', 'abc[key1][1]': 'ghi', 'abc[key2][4]': 'hij'}, {'abc': {'key1': ['def', 'ghi'], 'key2': {4: 'hij'}}})
+    f.description = 'with both associative & normal arrays'
+    yield f
+
+    f = functools.partial(_test, {'abc[key1][3]': 1, 'abc[key1][]': 23, 'ghi[key2][]': 45, 'ghi[key2][abc]': 56}, {'abc': {'key1': [23]}, 'ghi': {'key2': {'abc': 56}}})
+    f.description = 'with multiple inconsistent data strucutres'
+    yield f
+
+# TimeHelper tests
+def test_timedelta_from_timezone():
+    def _test(input, expected):
+        delta = import_logs.TimeHelper.timedelta_from_timezone(input)
+        assert delta == datetime.timedelta(0, expected)
+
+    _test('+0200', 7200)
+    _test('+1400', 50400)
+    _test('+0045', 2700)
+    _test('+0330', 12600)
+    _test('+0000', 0)
+    _test('-0500', -18000)
+    _test('-1200', -43200)
+    _test('-0040', -2400)
+    _test('-0230', -9000)
+    _test('-0000', 0)
+
+# Matomo error test
+def test_matomo_error_construct():
+    """Test that Matomo exception can be created."""
+
+    try:
+        raise import_logs.Matomo.Error('test message', 120)
+
+        assert false
+    except import_logs.Matomo.Error as e:
+        assert e.code == 120
+        assert e.message == 'test message'

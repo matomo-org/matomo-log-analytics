@@ -1,21 +1,21 @@
-# Piwik Server Log Analytics
+# Matomo Server Log Analytics
 
-Import your server logs in Piwik with this powerful and easy to use tool.
+Import your server logs in Matomo with this powerful and easy to use tool.
 
 ## Requirements
 
 * Python 2.6 or 2.7. Python 3.x is not supported.
-* Piwik >= 2.14.0
+* Matomo >= 2.14.0
 
-Build status (master branch) [![Build Status](https://travis-ci.org/piwik/piwik-log-analytics.svg?branch=master)](https://travis-ci.org/piwik/piwik-log-analytics)
+Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=master)](https://travis-ci.org/matomo-org/matomo-log-analytics)
 
 ## Supported log formats
 
 
 The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
- * all default log formats for: Nginx, Apache, IIS, Tomcat
- * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON
- * log files of some popular Cloud Saas services: Amazon CloudFront logs, Amazon S3 logs
+ * all default log formats for: Nginx, Apache, IIS, Tomcat, Haproxy
+ * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON, OVH
+ * log files of some popular Cloud services: Amazon AWS CloudFront logs, AWS S3 logs, AWS ELB logs.
  * streaming media server log files such as: Icecast
  * log files with and without the virtual host will be imported
 
@@ -27,40 +27,41 @@ We're looking for contributors! Feel free to submit Pull requests on Github.
 
 ### Submit a new log format
 
-The Log Analytics importer is designed to detect and import into Piwik as many log files as possible. Help us add your log formats!
+The Log Analytics importer is designed to detect and import into Matomo as many log files as possible. Help us add your log formats!
 
  * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
- * Add a new test in [tests/tests.py](https://github.com/piwik/piwik-log-analytics/blob/master/tests/tests.py),
+ * Add a new test in [tests/tests.py](https://github.com/matomo-org/matomo-log-analytics/blob/master/tests/tests.py),
  * Test that the logs are imported successfully as you expected (`tests/run_tests.sh`),
  * Open a Pull Request,
  * Check the test you have added works (the build should be green),
- * One Piwik team member will review and merge the Pull Request as soon as possible.
+ * One Matomo team member will review and merge the Pull Request as soon as possible.
 
 We look forward to your contributions!
 
 ### Improve this guide
 
-This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request.
+This readme page could be improved and maybe you would like to help? Feel free to "edit" this page and create a pull request.
 
 ### Implement new features or fixes
 
-if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/piwik/piwik-log-analytics/issues) which lists all issues and suggestions.
+If you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/matomo-org/matomo-log-analytics/issues) which lists all issues and suggestions.
 
 ## How to use this script?
 
 The most simple way to import your logs is to run:
 
-    ./import_logs.py --url=piwik.example.com /path/to/access.log
+    ./import_logs.py --url=matomo.example.com /path/to/access.log
 
-You must specify your Piwik URL with the `--url` argument.
+You must specify your Matomo URL with the `--url` argument.
 The script will automatically read your config.inc.php file to get the authentication
-token and communicate with your Piwik install to import the lines.
+token and communicate with your Matomo install to import the lines. If your Matomo install is on a different server, use the `--token-auth=<SECRET>` parameter to specify your API token.
+
 The default mode will try to mimic the Javascript tracker as much as possible,
 and will not track bots, static files, or error requests.
 
 If you wish to track all requests the following command would be used:
 
-    python /path/to/piwik/misc/log-analytics/import_logs.py --url=http://mysite/piwik/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log
+    python /path/to/matomo/misc/log-analytics/import_logs.py --url=http://mysite/matomo/ --idsite=1234 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots access.log
 
 
 ### Format Specific Details
@@ -68,6 +69,9 @@ If you wish to track all requests the following command would be used:
 * If you are importing Netscaler log files, make sure to specify the `--iis-time-taken-secs` option. Netscaler stores
   the time-taken field in seconds while most other formats use milliseconds. Using this option will ensure that the
   log importer interprets the field correctly.
+
+* Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
+  Those log formats are: OVH (ovh), Incapsula W3C (incapsula_w3c)
 
 ## How to import your logs automatically every day?
 
@@ -85,7 +89,7 @@ Your logs should be automatically rotated and stored on your webserver, for inst
 month and day).
 You can then import your logs automatically each day (at 0:01). Setup a cron job with the command:
 
-    0 1 * * * /path/to/piwik/misc/log-analytics/import-logs.py -u piwik.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
+    1 0 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
 
 ## Using Basic access authentication
 
@@ -94,7 +98,7 @@ cron job.
 
 Apache configuration:
 ```
-<Location /piwik>
+<Location /matomo>
     AuthType basic
     AuthName "Site requires authentication"
     # Where all the external login/passwords are
@@ -105,31 +109,31 @@ Apache configuration:
 
 cron job:
 ```
-5 0 * * * /var/www/html/piwik/misc/log-analytics/import_logs.py --url https://www.mysite.com/piwik --auth-user=someuser --auth-password=somepassword --exclude-path=*/piwik/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+5 0 * * * /var/www/html/matomo/misc/log-analytics/import_logs.py --url https://www.mysite.com/matomo --auth-user=someuser --auth-password=somepassword --exclude-path=*/matomo/index.php --enable-http-errors --enable-reverse-dns --idsite=1 `date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log` > /opt/scripts/import-logs.log
 ```
 
 Security tips:
 * Currently the credentials are not encrypted in the cron job. This should be a future enhancement.
-* Always use HTTPS with Basic access authentication to ensure you are not passing credentials clear text.
+* Always use HTTPS with Basic access authentication to ensure you are not passing credentials in clear text.
 
 ## Performance
 
 With an Intel Core i5-2400 @ 3.10GHz (2 cores, 4 virtual cores with Hyper-threading),
-running Piwik and its MySQL database, between 250 and 300 records were imported per second.
+running Matomo and its MySQL database, between 250 and 300 records were imported per second.
 
 The import_logs.py script needs CPU to read and parse the log files, but it is actually
-Piwik server itself (i.e. PHP/MySQL) which will use more CPU during data import.
+Matomo server itself (i.e. PHP/MySQL) which will use more CPU during data import.
 
 To improve performance,
 
-1. by default, the script one thread to parse and import log lines.
-   you can use the `--recorders` option to specify the number of parallel threads which will
-   import hits into Piwik. We recommend to set `--recorders=N` to the number N of CPU cores
-   that the server hosting Piwik has. The parsing will still be single-threaded,
-   but several hits will be tracked in Piwik at the same time.
-2. the script will issue hundreds of requests to piwik.php - to improve the Piwik webserver performance
+1. by default, the script uses one thread to parse and import log lines.
+   You can use the `--recorders` option to specify the number of parallel threads which will
+   import hits into Matomo. We recommend to set `--recorders=N` to the number N of CPU cores
+   that the server hosting Matomo has. The parsing will still be single-threaded,
+   but several hits will be tracked in Matomo at the same time.
+2. the script will issue hundreds of requests to matomo.php - to improve the Matomo webserver performance
    you can disable server access logging for these requests.
-   Each Piwik webserver (Apache, Nginx, IIS) can also be tweaked a bit to handle more req/sec.
+   Each Matomo webserver (Apache, Nginx, IIS) can also be tweaked a bit to handle more req/sec.
 
 ## Advanced uses
 
@@ -148,7 +152,7 @@ When executing `import_logs.py`, use `--log-format-name=common_complete`.
 
 ### How do I import Page Speed Metric from logs?
 
-In Piwik> Actions> Page URLs and Page Title reports, Piwik reports the Avg. generation time, as an indicator of your website speed.
+In Matomo> Actions> Page URLs and Page Title reports, Matomo reports the Avg. generation time, as an indicator of your website speed.
 This metric works by default when using the Javascript tracker, but you can use it with log file as well.
 
 Apache can log the generation time in microseconds using `%D` in the LogFormat.
@@ -163,11 +167,11 @@ Apache LogFormat "%h %l %u %t \"%r\" %>s %b %D"
 
 Note: the group `<generation_time_milli>` is also available if your server logs generation time in milliseconds rather than microseconds.
 
-### How do I setup Nginx to directly import to Piwik via syslog?
+### How do I setup Nginx to directly import to Matomo via syslog?
 
-Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Piwik.
+Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Matomo.
 
-Path: nginx -> syslog -> (syslog central server) -> import_logs.py -> piwik
+Path: nginx -> syslog -> (syslog central server) -> import_logs.py -> matomo
 
 As a syslog central server you could use rsyslog or syslog-ng, use relevant parts of documentation below. Rsyslog part is tested with Ubuntu 16.10 and is working out-of-the-box.
 
@@ -178,7 +182,7 @@ You can use any log format that this script can handle, like Apache Combined, an
 ```
 http {
 ...
-log_format  piwik                   '{"ip": "$remote_addr",'
+log_format  matomo                   '{"ip": "$remote_addr",'
                                     '"host": "$host",'
                                     '"path": "$request_uri",'
                                     '"status": "$status",'
@@ -191,9 +195,9 @@ log_format  piwik                   '{"ip": "$remote_addr",'
 	server {
 	...
 	# for syslog-ng
-	access_log syslog:server=127.0.0.1,severity=info piwik;
+	access_log syslog:server=127.0.0.1,severity=info matomo;
 	# for rsyslog
-	access_log syslog:server=unix:/var/cache/nginx/access.socket,facility=local0 piwik;
+	access_log syslog:server=unix:/var/cache/nginx/access.socket,facility=local0 matomo;
 	...
 	}
 }
@@ -210,20 +214,20 @@ options {
     log_msg_size(8192);
 };
 source s_nginx { udp(); };
-destination d_piwik {
-    program("/usr/local/piwik/piwik.sh" template("$MSG\n"));
+destination d_matomo {
+    program("/usr/local/matomo/matomo.sh" template("$MSG\n"));
 };
-log { source(s_nginx); filter(f_info); destination(d_piwik); };
+log { source(s_nginx); filter(f_info); destination(d_matomo); };
 ```
 
-###### piwik.sh, syslog-ng version
+###### matomo.sh, syslog-ng version
 
-Just needed to configure the best params for import_logs.py, file `/usr/local/piwik/piwik.sh`:
+Just needed to configure the best params for import_logs.py, file `/usr/local/matomo/matomo.sh`:
 ```
 #!/bin/sh
 
 /path/to/misc/log-analytics/import_logs.py \
- --url=http://localhost/piwik/ \
+ --url=http://localhost/matomo/ \
  --idsite=1 --recorders=4 --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
  --log-format-name=nginx_json -
 ```
@@ -244,42 +248,42 @@ Aug 31 23:59:59 tt-srv-name www.tt.com: 1.1.1.1 - - [31/Aug/2014:23:59:59 +0200]
 
 ##### Setup rsyslog
 
-Create new file `/etc/rsyslog.d/10-piwik.conf` with following content and restart rsyslog service afterwards:
+Create new file `/etc/rsyslog.d/10-matomo.conf` with following content and restart rsyslog service afterwards:
 ```
 # socket to which you should send nginx data
 $AddUnixListenSocket /var/cache/nginx/access.socket
 
 # message starts with tag, "nginx: <...>", which we remove
-$template piwik,"%msg:9:$%\n"
+$template matomo,"%msg:9:$%\n"
 
-# uncomment following line to debug what is sent to piwik and in which format
+# uncomment following line to debug what is sent to matomo and in which format
 # to check script part you could issue following command
 # and expected result is "1 requests imported successfully":
-# 'tail -1 /var/tmp/nginx.tmp | /usr/local/piwik/piwik.sh'
+# 'tail -1 /var/tmp/nginx.tmp | /usr/local/matomo/matomo.sh'
 
-#local0.* /var/tmp/nginx.tmp;piwik
-if $syslogfacility-text == 'local0' then ^/usr/local/piwik/piwik.sh;piwik
+#local0.* /var/tmp/nginx.tmp;matomo
+if $syslogfacility-text == 'local0' then ^/usr/local/matomo/matomo.sh;matomo
 ```
 
-###### piwik.sh, rsyslog version
+###### matomo.sh, rsyslog version
 
-`/usr/local/piwik/piwik.sh`, won't work without `--token-auth` parameter:
+`/usr/local/matomo/matomo.sh`, won't work without `--token-auth` parameter:
 ```
 #!/bin/sh
 
 echo "${@}" | /path/to/misc/log-analytics/import_logs.py \
- --url=https://localhost/piwik/ --token-auth=<SECRET> \
+ --url=https://localhost/matomo/ --token-auth=<SECRET> \
  --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
  --idsite=1 --recorders=4 --log-format-name=nginx_json -
 ```
 
 
-### Setup Apache CustomLog that directly imports in Piwik
+### Setup Apache CustomLog that directly imports in Matomo
 
-Since apache CustomLog directives can send log data to a script, it is possible to import hits into piwik server-side in real-time rather than processing a logfile each day.
+Since apache CustomLog directives can send log data to a script, it is possible to import hits into matomo server-side in real-time rather than processing a logfile each day.
 
-This approach has many advantages, including real-time data being available on your piwik site, using real logs files instead of relying on client-side Javacsript, and not having a surge of CPU/RAM usage during log processing.
-The disadvantage is that if Piwik is unavailable, logging data will be lost. Therefore we recommend to also log into a standard log file. Bear in mind also that apache processes will wait until a request is logged before processing a new request, so if piwik runs slow so does your site: it's therefore important to tune `--recorders` to the right level.
+This approach has many advantages, including real-time data being available on your matomo site, using real logs files instead of relying on client-side Javacsript, and not having a surge of CPU/RAM usage during log processing.
+The disadvantage is that if Matomo is unavailable, logging data will be lost. Therefore we recommend to also log into a standard log file. Bear in mind also that apache processes will wait until a request is logged before processing a new request, so if matomo runs slow so does your site: it's therefore important to tune `--recorders` to the right level.
 
 ##### Basic setup example
 
@@ -290,7 +294,7 @@ You might have in your main config section:
 LogFormat "%v %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" myLogFormat
 # Log to a file as usual
 CustomLog /path/to/logfile myLogFormat
-# Log to piwik as well
+# Log to matomo as well
 CustomLog "|/path/to/import_logs.py --option1 --option2 ... -" myLogFormat
 ```
 
@@ -298,19 +302,19 @@ Note: on Debian/Ubuntu, the default configuration defines the `vhost_combined` f
 
 Here is another example on Apache defining the custom log:
 ```
-LogFormat "%v %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" piwikLogFormat
+LogFormat "%v %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" matomoLogFormat
 
-CustomLog "||/var/www/virtual/test.tld/piwik/htdocs/misc/log-analytics/import_logs.py \
+CustomLog "||/var/www/virtual/test.tld/matomo/htdocs/misc/log-analytics/import_logs.py \
 --debug --enable-http-errors --enable-http-redirects --enable-bots \
---url=http://piwik.test.tld --output=/var/log/piwik.log --recorders=1 \
+--url=http://matomo.test.tld --output=/var/log/matomo.log --recorders=1 \
 --recorder-max-payload-size=1 --log-format-name=common_complete \
--" piwikLogFormat
+-" matomoLogFormat
 ```
 
 Useful options here are:
 
-* `--add-sites-new-hosts` (creates new websites in piwik based on %v in the LogFormat)
-* `--output=/path/to/piwik.log` (puts any output into a log file for reference/debugging later)
+* `--add-sites-new-hosts` (creates new websites in matomo based on %v in the LogFormat)
+* `--output=/path/to/matomo.log` (puts any output into a log file for reference/debugging later)
 * `--recorders=4` (use whatever value seems sensible for you - higher traffic sites will need more recorders to keep up)
 * `-` so it reads straight from /dev/stdin
 
@@ -323,8 +327,8 @@ As a rather extreme example of what you can do, here is an apache config with:
 
 * standard logging in the main config area for the majority of VirtualHosts
 * customised logging in a particular virtualhost to change the hostname (for instance, if a particular virtualhost should be logged as if it were a different site)
-* customised logging in another virtualhost which creates new websites in piwik for subsites (e.g. to have domain.com/subsite1 as a whole website in its own right). This requires setting up a custom `--log-format-regex` to allow "/" in the hostname section (NB the escaping necessary for apache to pass through the regex to piwik properly), and also to have multiple CustomLog directives so the subsite gets logged to both domain.com and domain.com/subsite1 websites in piwik
-* we also use mod_rewrite to set environment variables so that if you have multiple subsites with the same format , e.g. /subsite1, /subsite2, etc, you can automatically create a new piwik website for each one without having to configure them manually
+* customised logging in another virtualhost which creates new websites in matomo for subsites (e.g. to have domain.com/subsite1 as a whole website in its own right). This requires setting up a custom `--log-format-regex` to allow "/" in the hostname section (NB the escaping necessary for apache to pass through the regex to matomo properly), and also to have multiple CustomLog directives so the subsite gets logged to both domain.com and domain.com/subsite1 websites in matomo
+* we also use mod_rewrite to set environment variables so that if you have multiple subsites with the same format , e.g. /subsite1, /subsite2, etc, you can automatically create a new matomo website for each one without having to configure them manually
 
 NB use of mod_macro to ensure consistency and maintainability
 
@@ -332,20 +336,20 @@ Apache configuration source code:
 
 ```
 # Set up macro with the options
-# * $vhost (this will be used as the piwik website name),
+# * $vhost (this will be used as the matomo website name),
 # * $logname (the name of the LogFormat we're using),
 # * $output (which logfile to save import_logs.py output to),
 # * $env (CustomLog can be set only to fire if an environment variable is set - this contains that environment variable, so subsites only log when it's set)
 # NB the --log-format-regex line is exactly the same regex as import_logs.py's own 'common_vhost' format, but with "\/" added in the "host" section's allowed characters
-<Macro piwiklog $vhost $logname $output $env>
+<Macro matomolog $vhost $logname $output $env>
 LogFormat "$vhost %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" $logname
-CustomLog       "|/path/to/piwik/misc/log-analytics/import_logs.py \
+CustomLog       "|/path/to/matomo/misc/log-analytics/import_logs.py \
 --add-sites-new-hosts \
---config=/path/to/piwik/config/config.ini.php \
---url='http://your.piwik.install/' \
+--config=/path/to/matomo/config/config.ini.php \
+--url='http://your.matomo.install/' \
 --recorders=4 \
 --log-format-regex='(?P<host>[\\\\w\\\\-\\\\.\\\\/]*)(?::\\\\d+)? (?P<ip>\\\\S+) \\\\S+ \\\\S+ \\\\[(?P<date>.*?) (?P<timezone>.*?)\\\\] \\\"\\\\S+ (?P<path>.*?) \\\\S+\\\" (?P<status>\\\\S+) (?P<length>\\\\S+) \\\"(?P<referrer>.*?)\\\" \\\"(?P<user_agent>.*?)\\\"' \
---output=/var/log/piwik/$output.log \
+--output=/var/log/matomo/$output.log \
 -" \
 $logname \
 $env
@@ -354,22 +358,22 @@ $env
 
 # * normal %v as hostname,
 # * vhost_common as logformat name,
-# * /var/log/piwik/main.log as the logfile,
+# * /var/log/matomo/main.log as the logfile,
 # * no env variable needed since we always want to trigger
-Use piwiklog %v vhost_common main " "
+Use matomolog %v vhost_common main " "
 <VirtualHost>
 	ServerName example.com
-	# Set this host to log to piwik with a different hostname (and using a different output file, /var/log/piwik/example_com.log)
-	Use piwiklog "another-host.com" vhost_common example_com " "
+	# Set this host to log to matomo with a different hostname (and using a different output file, /var/log/matomo/example_com.log)
+	Use matomolog "another-host.com" vhost_common example_com " "
 </VirtualHost>
 
 <VirtualHost>
 	ServerName domain.com
 	# We want to log this normally, so repeat the CustomLog from the main section
 	# (if this is omitted, our other CustomLogs below will override the one in the main section, so the main site won't be logged)
-	Use piwiklog %v vhost_common main " "
+	Use matomolog %v vhost_common main " "
 
-	# Now set up mod_rewrite to detect our subsites and set up new piwik websites to track just hits to these (this is a bit like profiles in Google Analytics).
+	# Now set up mod_rewrite to detect our subsites and set up new matomo websites to track just hits to these (this is a bit like profiles in Google Analytics).
 	# We want to match domain.com/anothersubsite and domain.com/subsite[0-9]+
 
 	# First to be on the safe side, unset the env we'll use to test if we're in a subsite:
@@ -385,20 +389,20 @@ Use piwiklog %v vhost_common main " "
 	RewriteCond %{HTTP_REFERER} domain\.com/(subsite[0-9]+)(/|$)
 	RewriteRule ^/.*        -       [E=vhostLogName:subsite%1]
 
-	# Now set the logging to piwik setting:
+	# Now set the logging to matomo setting:
 	# * the hostname to domain.com/<subsitename>
 	# * the logformat to vhost_domain_com_subsites (can be anything so long as it's unique)
-	# * the output to go to /var/log/piwik/domain_com_subsites.log (again, can be anything)
+	# * the output to go to /var/log/matomo/domain_com_subsites.log (again, can be anything)
 	# * triggering only when the env variable is set, so requests to other URIs on this domain don't call this logging rule
-	Use piwiklog domain.com/%{vhostLogName}e vhost_domain_com_subsites domain_com_subsites env=vhostLogName
+	Use matomolog domain.com/%{vhostLogName}e vhost_domain_com_subsites domain_com_subsites env=vhostLogName
 </VirtualHost>
 ```
 
 ### License
 
-As [piwik](`https://github.com/piwik/piwik`) (which includes this code as a git reference), piwik-log-analytics is released under the GPLv3 or later.  Please refer to  [LEGALNOTICE](LEGALNOTICE) for copyright and trademark statements and [LICENSE.txt](LICENSE.txt) for the full text of the GPLv3.
+As [matomo](`https://github.com/matomo-org/matomo`) (which includes this code as a git reference), matomo-log-analytics is released under the GPLv3 or later.  Please refer to  [LEGALNOTICE](LEGALNOTICE) for copyright and trademark statements and [LICENSE.txt](LICENSE.txt) for the full text of the GPLv3.
 
 ### And that's all !
 
 
-***This documentation is a community effort, we welcome your pull requests to [improve this documentation](https://github.com/piwik/piwik-log-analytics/edit/master/README.md).***
+***This documentation is a community effort, we welcome your pull requests to [improve this documentation](https://github.com/matomo-org/matomo-log-analytics/edit/master/README.md).***
