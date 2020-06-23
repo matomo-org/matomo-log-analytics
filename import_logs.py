@@ -103,6 +103,8 @@ EXCLUDED_USER_AGENTS = (
     'voilabot',
     'yahoo',
     'yandex',
+    'zabbix',
+    'googlestackdrivermonitoring',
 )
 
 MATOMO_DEFAULT_MAX_ATTEMPTS = 3
