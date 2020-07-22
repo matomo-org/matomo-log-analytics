@@ -1919,6 +1919,7 @@ class Recorder:
             'cip': hit.ip,
             'cdt': self.date_to_matomo(hit.date),
             'idsite': site_id,
+            'queuedtracking': '0',
             'dp': '0' if config.options.reverse_dns else '1',
             'ua': hit.user_agent
         }
