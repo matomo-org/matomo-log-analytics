@@ -949,7 +949,10 @@ class Configuration(object):
 
         all_filenames = []
         for self.filename in self.filenames:
-            all_filenames = all_filenames + glob.glob(self.filename)
+            if self.filename == '-':
+                all_filenames.append(self.filename)
+            else:
+                all_filenames = all_filenames + glob.glob(self.filename)
         self.filenames = all_filenames
 
         # Configure logging before calling logging.{debug,info}.
