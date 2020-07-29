@@ -177,12 +177,15 @@ As a syslog central server you could use rsyslog or syslog-ng, use relevant part
 
 You can use any log format that this script can handle, like Apache Combined, and Json format which needs less processing.
 
+The script has an option "--use-http-x-forwarded-for" which causes the script to pick up an ip address from the `http_x_forwarded_for` field instead of the `ip` field in Nginx JSON formatted log file. If the `http_x_forwarded_for` field contains "-" or is missing, the script will pick up the ip address from the `ip` field. This option is useful if the `ip` field does not contain client's ip address (e.g. using Nginx as a reverse proxy).
+
 ##### Setup Nginx logs
 
 ```
 http {
 ...
-log_format  matomo                   '{"ip": "$remote_addr",'
+log_format  matomo                 '{"ip": "$remote_addr",'
+                                    '"http_x_forwarded_for": "$http_x_forwarded_for",'
                                     '"host": "$host",'
                                     '"path": "$request_uri",'
                                     '"status": "$status",'

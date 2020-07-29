@@ -176,6 +176,15 @@ class JsonFormat(BaseFormat):
         # Some ugly patchs ...
         if key == 'generation_time_milli':
             self.json[key] =  int(float(self.json[key]) * 1000)
+        elif key == 'ip':
+            try:
+                if config.options.use_http_x_forwarded_for and 'http_x_forwarded_for' in self.json:
+                    ips = self.json['http_x_forwarded_for']
+                    if ips != '-':
+                        return re.search(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4})', ips).group()
+                return self.json[key]
+            except KeyError:
+                raise BaseFormatException()
         # Patch date format ISO 8601
         elif key == 'date':
             tz = self.json[key][19:]
@@ -890,6 +899,11 @@ class Configuration(object):
             dest='accept_invalid_ssl_certificate', action='store_true',
             default=False,
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server. This is the default when running on Python 2.7.8 or older."
+        )
+        option_parser.add_option(
+            '--use-http-x-forwarded-for', dest='use_http_x_forwarded_for',
+            action='store_true', default=False,
+            help="Use http_x_forwarded_for for ip in Nginx JSON formatted log file. If http_x_forwarded_for is not present, it will use ip."
         )
         return option_parser
 

@@ -196,6 +196,7 @@ class Options(object):
         self.track_http_method = True
         self.seconds_to_add_to_date = 0
         self.request_suffix = None
+        self.use_http_x_forwarded_for = False
 
 class Config(object):
     """Mock configuration."""
@@ -547,6 +548,64 @@ def test_iis_custom_format():
     assert hits[2]['is_robot'] == False
     assert hits[2]['full_path'] == u'/hello/world/6,681965'
     assert hits[2]['user_agent'] == u'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.124 Safari/537.36'
+
+def test_nginx_parsing_using_use_http_x_forwarded_for_option_set_to_true():
+    """test parsing of nginx_json log with use_http_x_forwarded_for set to true"""
+
+    file_ = 'logs/nginx_json.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = True
+    import_logs.config.options.use_http_x_forwarded_for = True
+
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[1]['ip'] == u'1.2.3.4'
+    assert hits[2]['ip'] == u'0:0:0:0:0:ffff:7b2d:4350'
+    assert hits[3]['ip'] == u'1.2.3.5'
+    assert hits[4]['ip'] == u'0:0:0:0:0:ffff:7b2d:4351'
+    assert hits[5]['ip'] == u'4.3.2.1'
+    assert hits[6]['ip'] == u'0:0:0:0:0:ffff:7b2d:4359'
+
+    assert len(hits) == 7
+
+def test_nginx_parsing_using_use_http_x_forwarded_for_option_set_to_false():
+    """test parsing of nginx_json log with use_http_x_forwarded_for set to false"""
+
+    file_ = 'logs/nginx_json.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = True
+    import_logs.config.options.use_http_x_forwarded_for = False
+    import_logs.parser.parse(file_)
+
+    print(import_logs.config.options.use_http_x_forwarded_for)
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['ip'] == u'1.2.3.4'
+    assert hits[1]['ip'] == u'1.2.3.4'
+    assert hits[2]['ip'] == u'0:0:0:0:0:ffff:7b2d:4350'
+    assert hits[3]['ip'] == u'1.2.3.5'
+    assert hits[4]['ip'] == u'0:0:0:0:0:ffff:7b2d:4351'
+    assert hits[5]['ip'] == u'1.2.3.6'
+    assert hits[6]['ip'] == u'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
+
+    assert len(hits) == 7
 
 def test_netscaler_parsing():
     """test parsing of netscaler logs (which use extended W3C log format)"""
