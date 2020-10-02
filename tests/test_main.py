@@ -687,6 +687,47 @@ def test_elb_parsing():
     assert hits[0]['user_agent'] == 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
     assert hits[0]['length'] == 57
 
+def test_alb_parsing():
+    """test parsing of alb logs"""
+
+    file_ = 'logs/alb.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert len(hits) == 1
+
+    assert hits[0]['status'] == '200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == 'html'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['args'] == {}
+    assert hits[0]['generation_time_milli'] == 102
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/alb.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2020, 1, 1, 0, 55, 4)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == '1.2.3.4'
+    assert hits[0]['query_string'] == ''
+    assert hits[0]['path'] == '/path/index.html'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == '/path/index.html'
+    assert hits[0]['user_agent'] == 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
+    assert hits[0]['length'] == 24950
+
 def test_amazon_cloudfront_web_parsing():
     """test parsing of amazon cloudfront logs (which use extended W3C log format)"""
 
