@@ -53,6 +53,9 @@ import textwrap
 import collections
 import glob
 
+# Avoid "got more than 100 headers" error
+http.client._MAXHEADERS = 1000
+
 ##
 ## Constants.
 ##
