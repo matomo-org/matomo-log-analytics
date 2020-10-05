@@ -464,7 +464,7 @@ _ICECAST2_LOG_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
     r'\s+(?P<session_time>[0-9-]+)'
 )
 _ELB_LOG_FORMAT = (
-    r'(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
+    r'(?:\S+\s+)?(?P<date>[0-9-]+T[0-9:]+)\.\S+\s+\S+\s+(?P<ip>[\w*.:-]+):\d+\s+\S+:\d+\s+\S+\s+(?P<generation_time_secs>\S+)\s+\S+\s+'
     r'(?P<status>\d+)\s+\S+\s+\S+\s+(?P<length>\S+)\s+'
     r'"\S+\s+\w+:\/\/(?P<host>[\w\-\.]*):\d+(?P<path>\/\S*)\s+[^"]+"\s+"(?P<user_agent>[^"]+)"\s+\S+\s+\S+'
 )
