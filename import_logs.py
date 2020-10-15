@@ -1649,6 +1649,11 @@ class StaticResolver:
         site = matomo.call_api(
             'SitesManager.getSiteFromId', idSite=self.site_id
         )
+
+        # On success call_api returns a list of dicts
+        if isinstance(site, list):
+            site = site[0]
+
         if site.get('result') == 'error':
             fatal_error(
                 "cannot get the main URL of this site: %s" % site.get('message')
