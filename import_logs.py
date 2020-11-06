@@ -1569,11 +1569,10 @@ class MatomoHttpUrllib(MatomoHttpBase):
 
         res = self._call('/', final_args, url=url)
 
-
         try:
             return json.loads(res)
         except ValueError:
-            raise urllib.error.URLError('Matomo returned an invalid response: ' + res)
+            raise urllib.error.URLError('Matomo returned an invalid response: ' + res.decode("utf-8") )
 
     def _call_wrapper(self, func, expected_response, on_failure, *args, **kwargs):
         """
