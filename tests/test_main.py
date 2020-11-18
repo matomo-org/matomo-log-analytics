@@ -1177,11 +1177,11 @@ def test_gz_parsing():
 
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
-    assert hits[0]['ip'] == '1.2.3.4'
-    assert hits[0]['path'] == '/'
-    assert hits[0]['status'] == '301'
-    assert hits[0]['length'] == 368
-    assert hits[0]['userid'] == 'theuser'
+    assert hits[0]['ip'] == '1.2.3.5'
+    assert hits[0]['path'] == '/form'
+    assert hits[0]['status'] == '200'
+    assert hits[0]['length'] == 145
+    assert hits[0]['userid'] == 'admin'
 
 def test_bz2_parsing():
     """test parsing of bz2 compressed file"""
@@ -1196,8 +1196,8 @@ def test_bz2_parsing():
 
     hits = [hit.__dict__ for hit in Recorder.recorders]
 
-    assert hits[0]['ip'] == '1.2.3.4'
+    assert hits[0]['ip'] == '1.2.3.7'
     assert hits[0]['path'] == '/'
-    assert hits[0]['status'] == '301'
-    assert hits[0]['length'] == 368
-    assert hits[0]['userid'] == 'theuser'
+    assert hits[0]['status'] == '200'
+    assert hits[0]['length'] == 444
+    assert hits[0]['userid'] == 'theboss'
