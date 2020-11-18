@@ -1105,8 +1105,7 @@ def test_glob_filenames():
 
     config = import_logs.Configuration(argv)
 
-    filenames = sorted(config.filenames)
-    assert filenames == ['logs/common.log', 'logs/common_complete.log', 'logs/common_encoding_big5.log', 'logs/common_vhost.log', 'logs/elb.log']
+    assert config.filenames == ['logs/common.log', 'logs/common_complete.log', 'logs/common_encoding_big5.log', 'logs/common_vhost.log', 'logs/elb.log']
 
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
