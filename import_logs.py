@@ -938,7 +938,7 @@ class Configuration:
             if self.filename == '-':
                 all_filenames.append(self.filename)
             else:
-                all_filenames = all_filenames + glob.glob(self.filename)
+                all_filenames = all_filenames + sorted(glob.glob(self.filename))
         self.filenames = all_filenames
 
         # Configure logging before calling logging.{debug,info}.
