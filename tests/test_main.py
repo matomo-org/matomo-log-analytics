@@ -1162,3 +1162,41 @@ def test_matomo_error_construct():
     except import_logs.MatomoHttpBase.Error as e:
         assert e.code == 120
         assert e.args[0] == 'test message'
+
+def test_gz_parsing():
+    """test parsing of gz compressed file"""
+
+    file_ = 'logs/common.log.gz'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['ip'] == '1.2.3.5'
+    assert hits[0]['path'] == '/form'
+    assert hits[0]['status'] == '200'
+    assert hits[0]['length'] == 145
+    assert hits[0]['userid'] == 'admin'
+
+def test_bz2_parsing():
+    """test parsing of bz2 compressed file"""
+
+    file_ = 'logs/common.log.bz2'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['ip'] == '1.2.3.7'
+    assert hits[0]['path'] == '/'
+    assert hits[0]['status'] == '200'
+    assert hits[0]['length'] == 444
+    assert hits[0]['userid'] == 'theboss'

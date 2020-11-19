@@ -390,7 +390,7 @@ class IncapsulaW3CFormat(W3cExtendedFormat):
         self.name = 'incapsula_w3c'
 
     def get(self, key):
-        value = super(IncapsulaW3CFormat, self).get(key);
+        value = super(IncapsulaW3CFormat, self).get(key)
         if key == 'status' or key == 'length':
             value = value.strip('"')
         if key == 'status' and value == '':
@@ -2347,12 +2347,13 @@ class Parser:
                 return
             else:
                 if filename.endswith('.bz2'):
-                    open_func = bz2.BZ2File
+                    open_func = bz2.open
                 elif filename.endswith('.gz'):
                     open_func = gzip.open
                 else:
                     open_func = open
-                    file = open_func(filename, mode='r', encoding=config.options.encoding, errors="surrogateescape")
+
+                file = open_func(filename, mode='rt', encoding=config.options.encoding, errors="surrogateescape")
 
         if config.options.show_progress:
             print(('Parsing log %s...' % filename))
