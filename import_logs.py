@@ -1276,7 +1276,7 @@ Processing your log data
 ------------------------
 
     In order for your logs to be processed by Matomo, you may need to run the following command:
-     ./console core:archive --force-all-websites --force-all-periods=315576000 --force-date-last-n=1000 --url='%(url)s'
+     ./console core:archive --force-all-websites --force-date-last-n=1000 --url='%(url)s'
 ''' % {
 
     'count_lines_recorded': self.count_lines_recorded.value,
