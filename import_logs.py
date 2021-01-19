@@ -1570,7 +1570,7 @@ class MatomoHttpUrllib(MatomoHttpBase):
         res = self._call('/', final_args, url=url)
 
         try:
-            return json.loads(res)
+            return json.loads(res.decode("utf-8"))
         except ValueError:
             raise urllib.error.URLError('Matomo returned an invalid response: ' + res.decode("utf-8") )
 
@@ -2012,7 +2012,7 @@ class Recorder:
 
                 # check for invalid requests
                 try:
-                    response = json.loads(response)
+                    response = json.loads(response.decode("utf-8"))
                 except:
                     logging.info("bulk tracking returned invalid JSON")
 
