@@ -289,7 +289,11 @@ class W3cExtendedFormat(RegexFormat):
         # if we're reading from stdin, we can't seek, so don't read any more than the Fields line
         header_lines = []
         while fields_line is None:
-            line = file.readline().strip()
+            line = file.readline()
+            if not line:
+                break
+
+            line = line.strip()
 
             if not line:
                 continue
