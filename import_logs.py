@@ -905,7 +905,7 @@ class Configuration:
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server."
         )
         parser.add_argument(
-            '--php-binary', dest='php_binary', type=str', default='php',
+            '--php-binary', dest='php_binary', type=str, default='php',
             help="Specify the PHP binary to use.",
         )
         return parser
