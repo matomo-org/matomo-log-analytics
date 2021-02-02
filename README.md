@@ -4,16 +4,16 @@ Import your server logs in Matomo with this powerful and easy to use tool.
 
 ## Requirements
 
-* Python 2.6 or 2.7. Python 3.x is not supported.
-* Matomo >= 2.14.0
+* Python 3.5, 3.6 or 3.7.
+* Matomo >= 4.0.0
 
-Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=master)](https://travis-ci.org/matomo-org/matomo-log-analytics)
+Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=4.x-dev)](https://travis-ci.org/matomo-org/matomo-log-analytics)
 
 ## Supported log formats
 
 
 The script will import all standard web server log files, and some files with non-standard formats. The following log formats are supported:
- * all default log formats for: Nginx, Apache, IIS, Tomcat
+ * all default log formats for: Nginx, Apache, IIS, Tomcat, Haproxy
  * all log formats commonly used such as: NCSA Common log format, Extended log format, W3C Extended log files, Nginx JSON, OVH
  * log files of some popular Cloud services: Amazon AWS CloudFront logs, AWS S3 logs, AWS ELB logs.
  * streaming media server log files such as: Icecast
@@ -30,7 +30,7 @@ We're looking for contributors! Feel free to submit Pull requests on Github.
 The Log Analytics importer is designed to detect and import into Matomo as many log files as possible. Help us add your log formats!
 
  * Implement your new log format in the import_logs.py file (look for `FORMATS = {` variable where the log formats are defined),
- * Add a new test in [tests/tests.py](https://github.com/matomo-org/matomo-log-analytics/blob/master/tests/tests.py),
+ * Add a new test in [tests/test_main.py](https://github.com/matomo-org/matomo-log-analytics/blob/4.x-dev/tests/test_main.py),
  * Test that the logs are imported successfully as you expected (`tests/run_tests.sh`),
  * Open a Pull Request,
  * Check the test you have added works (the build should be green),
@@ -40,11 +40,11 @@ We look forward to your contributions!
 
 ### Improve this guide
 
-This readme page could be improved and maybe you would like to help? feel free to create a "edit" this page and create a pull request.
+This readme page could be improved and maybe you would like to help? Feel free to "edit" this page and create a pull request.
 
 ### Implement new features or fixes
 
-if you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/matomo-org/matomo-log-analytics/issues) which lists all issues and suggestions.
+If you're a Python developer and would like to contribute to open source log importer, check out the [list of issues for import_logs.py](https://github.com/matomo-org/matomo-log-analytics/issues) which lists all issues and suggestions.
 
 ## How to use this script?
 
@@ -54,7 +54,8 @@ The most simple way to import your logs is to run:
 
 You must specify your Matomo URL with the `--url` argument.
 The script will automatically read your config.inc.php file to get the authentication
-token and communicate with your Matomo install to import the lines.
+token and communicate with your Matomo install to import the lines. If your Matomo install is on a different server, use the `--token-auth=<SECRET>` parameter to specify your API token.
+
 The default mode will try to mimic the Javascript tracker as much as possible,
 and will not track bots, static files, or error requests.
 
@@ -70,7 +71,7 @@ If you wish to track all requests the following command would be used:
   log importer interprets the field correctly.
 
 * Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
-  Those log formats are: OVH
+  Those log formats are: OVH (ovh), Incapsula W3C (incapsula_w3c)
 
 ## How to import your logs automatically every day?
 
@@ -88,7 +89,7 @@ Your logs should be automatically rotated and stored on your webserver, for inst
 month and day).
 You can then import your logs automatically each day (at 0:01). Setup a cron job with the command:
 
-    0 1 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
+    1 0 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
 
 ## Using Basic access authentication
 
@@ -108,12 +109,12 @@ Apache configuration:
 
 cron job:
 ```
-5 0 * * * /var/www/html/matomo/misc/log-analytics/import_logs.py --url https://www.mysite.com/matomo --auth-user=someuser --auth-password=somepassword --exclude-path=*/matomo/index.php --enable-http-errors --enable-reverse-dns --idsite=1 date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log > /opt/scripts/import-logs.log
+5 0 * * * /var/www/html/matomo/misc/log-analytics/import_logs.py --url https://www.mysite.com/matomo --auth-user=someuser --auth-password=somepassword --exclude-path=*/matomo/index.php --enable-http-errors --enable-reverse-dns --idsite=1 `date --date=yesterday +/var/log/apache2/access-ssl-\%Y-\%m-\%d.log` > /opt/scripts/import-logs.log
 ```
 
 Security tips:
 * Currently the credentials are not encrypted in the cron job. This should be a future enhancement.
-* Always use HTTPS with Basic access authentication to ensure you are not passing credentials clear text.
+* Always use HTTPS with Basic access authentication to ensure you are not passing credentials in clear text.
 
 ## Performance
 
@@ -125,8 +126,8 @@ Matomo server itself (i.e. PHP/MySQL) which will use more CPU during data import
 
 To improve performance,
 
-1. by default, the script one thread to parse and import log lines.
-   you can use the `--recorders` option to specify the number of parallel threads which will
+1. by default, the script uses one thread to parse and import log lines.
+   You can use the `--recorders` option to specify the number of parallel threads which will
    import hits into Matomo. We recommend to set `--recorders=N` to the number N of CPU cores
    that the server hosting Matomo has. The parsing will still be single-threaded,
    but several hits will be tracked in Matomo at the same time.
@@ -233,7 +234,7 @@ Just needed to configure the best params for import_logs.py, file `/usr/local/ma
 
 ##### Example of regex for syslog format (centralized logs)
 
-###### log format exemple
+###### log format example
 
 ```
 Aug 31 23:59:59 tt-srv-name www.tt.com: 1.1.1.1 - - [31/Aug/2014:23:59:59 +0200] "GET /index.php HTTP/1.0" 200 3838 "http://www.tt.com/index.php" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0" 365020 www.tt.com
