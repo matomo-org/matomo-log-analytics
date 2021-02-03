@@ -904,6 +904,10 @@ class Configuration:
             default=False,
             help="Do not verify the SSL / TLS certificate when contacting the Matomo server."
         )
+        parser.add_argument(
+            '--php-binary', dest='php_binary', type=str, default='php',
+            help="Specify the PHP binary to use.",
+        )
         return parser
 
     def _valid_date(self, value):
@@ -1075,10 +1079,11 @@ class Configuration:
                     '../../misc/cron/updatetoken.php'),
             )
 
-            phpBinary = 'php'
+            phpBinary = config.options.php_binary
 
+            # Special handling for windows (only if given php binary does not differ from default)
             is_windows = sys.platform.startswith('win')
-            if is_windows:
+            if phpBinary == 'php' and is_windows:
                 try:
                     processWin = subprocess.Popen('where php.exe', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     [stdout, stderr] = processWin.communicate()
