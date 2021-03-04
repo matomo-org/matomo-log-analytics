@@ -2559,7 +2559,7 @@ class Parser:
 
             # Parse timezone and subtract its value from the date
             try:
-                timezone = format.get('timezone')
+                timezone = format.get('timezone').replace(':', '')
                 if timezone:
                     hit.date -= TimeHelper.timedelta_from_timezone(timezone)
             except BaseFormatException:
