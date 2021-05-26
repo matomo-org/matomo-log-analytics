@@ -78,7 +78,8 @@ DOWNLOAD_EXTENSIONS = set((
     'ibooks jar json mpg mp2 mp3 mp4 mpeg mov movie msi msp odb odf odg odp '
     'ods odt ogg ogv pdf phps ppt pptx qt qtm ra ram rar rpm rtf sea sit tar tbz '
     'bz2 tbz tgz torrent txt wav webm wma wmv wpd xls xlsx xml xsd z zip '
-    'azw3 epub mobi apk'
+    'azw3 epub mobi apk '
+    'md5 sig'
 ).split())
 
 # A good source is: http://phpbb-bots.blogspot.com/
