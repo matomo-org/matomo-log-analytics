@@ -21,6 +21,8 @@ if sys.version_info[0] != 3:
     print('Please use Python 3.5, 3.6, 3.7 or 3.8')
     sys.exit(1)
 
+import ipaddress # New in Python 3.3
+
 import base64
 import bz2
 import configparser
@@ -908,6 +910,10 @@ class Configuration:
         parser.add_argument(
             '--php-binary', dest='php_binary', type=str, default='php',
             help="Specify the PHP binary to use.",
+        )
+        parser.add_argument(
+            '--anonymize-ip-bytes', dest='anonymize_ip_bytes', type=int,
+            default=0, help="Anonymize specified number of least specific IP address bytes. Useful to comply with GDPR without asking for consent."
         )
         return parser
 
@@ -2491,6 +2497,12 @@ class Parser:
                 hit.user_agent = ''
 
             hit.ip = format.get('ip')
+            if config.options.anonymize_ip_bytes > 0:
+                ipnet_obj = ipaddress.ip_network(hit.ip)
+                prefixlen_diff = config.options.anonymize_ip_bytes*8
+                anon_ipobj = ipnet_obj.supernet(prefixlen_diff=prefixlen_diff)[0]
+                hit.ip = str(anon_ipobj)
+
             try:
                 hit.length = int(format.get('length'))
             except (ValueError, BaseFormatException):

@@ -187,6 +187,7 @@ class Options(object):
         self.track_http_method = True
         self.seconds_to_add_to_date = 0
         self.request_suffix = None
+        self.anonymize_ip_bytes = 0
 
 class Config(object):
     """Mock configuration."""
@@ -767,6 +768,56 @@ def test_amazon_cloudfront_web_parsing():
     assert hits[0]['user_agent'] == 'Mozilla/5.0 (Windows; U; Windows NT 6.1; de-DE) AppleWebKit/534.17 (KHTML, like Gecko) Chrome/10.0.649.0 Safari/534.17'
 
     assert len(hits) == 1
+
+def test_amazon_cloudfront_web_parsing_with_anon():
+    """test parsing of amazon cloudfront logs (which use extended W3C log format)"""
+
+    file_ = 'logs/amazon_cloudfront_web.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+
+    import_logs.config.options.anonymize_ip_bytes = 1
+    import_logs.parser.parse(file_)
+
+    import_logs.config.options.anonymize_ip_bytes = 2
+    import_logs.parser.parse(file_)
+
+    # Reset to zero, to avoid disturbing other tests.
+    import_logs.config.options.anonymize_ip_bytes = 0
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == '200'
+    assert hits[0]['userid'] == None
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == 'html'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == 'https://example.com/'
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}}
+    assert hits[0]['generation_time_milli'] == 1.0
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/amazon_cloudfront_web.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2014, 5, 23, 1, 13, 11)
+    assert hits[0]['lineno'] == 2
+    assert hits[0]['ip'] == '192.0.2.0'
+    assert hits[0]['query_string'] == ''
+    assert hits[0]['path'] == '/view/my/file.html'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == '/view/my/file.html'
+    assert hits[0]['user_agent'] == 'Mozilla/5.0 (Windows; U; Windows NT 6.1; de-DE) AppleWebKit/534.17 (KHTML, like Gecko) Chrome/10.0.649.0 Safari/534.17'
+
+    assert hits[1]['ip'] == '192.0.0.0'
+
+    assert len(hits) == 2
 
 def test_ovh_parsing():
     """test parsing of ovh logs (which needs to be forced, as it's not autodetected)"""
