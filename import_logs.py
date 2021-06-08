@@ -907,7 +907,19 @@ class Configuration:
         )
         parser.add_argument(
             '--php-binary', dest='php_binary', type=str, default='php',
-            help="Specify the PHP binary to use.",
+            help="Specify the PHP binary to use."
+        )
+        parser.add_argument(
+            '--pass-key-file-path', dest='pass_key_file_path', type=str, default=None,
+            help="Give path to pem key file location for authentication."
+        )
+        parser.add_argument(
+            '--pass-cert-file-path', dest='pass_cert_file_path', type=str, default=None,
+            help="Give path to pem cert file location for authentication."
+        )
+        parser.add_argument(
+            '--pass-ca-cert-file-path', dest='pass_ca_cert_file_path', type=str, default=None,
+            help="Give path to ca cert file location for authentication."
         )
         return parser
 
@@ -1523,12 +1535,22 @@ class MatomoHttpUrllib(MatomoHttpBase):
             https_handler_args = {'context': ssl_context}
         else:
             https_handler_args = {}
-        opener = urllib.request.build_opener(
-            self.RedirectHandlerWithLogging(),
-            urllib.request.HTTPSHandler(**https_handler_args))
-        response = opener.open(request, timeout = timeout)
-        result = response.read()
-        response.close()
+
+        # if passing in a key and cert file path authenticate with certs
+        if config.options.pass_key_file_path != None and config.options.pass_cert_file_path != None:
+            https_handler = VerifiedHTTPSHandler()
+            url_opener = urllib.request.build_opener(https_handler)
+            response = url_opener.open(request, timeout=timeout)
+            result = response.read()
+            response.close()
+        # else authenticate without client certificates
+        else:        
+            opener = urllib.request.build_opener(
+                self.RedirectHandlerWithLogging(),
+                urllib.request.HTTPSHandler(**https_handler_args))
+            response = opener.open(request, timeout = timeout)
+            result = response.read()
+            response.close()
         return result
 
     def _call_api(self, method, **kwargs):
@@ -2626,6 +2648,37 @@ class Parser:
                     hit.add_page_custom_var(custom_var_name, value)
                 else:
                     hit.add_visit_custom_var(custom_var_name, value)
+
+class VerifiedHTTPSConnection(http.client.HTTPSConnection):
+    def connect(self):
+        # overrides the version in httplib so that we do certificate verification
+        socket_s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        url = urllib.parse.urlparse(config.options.matomo_url)
+        domain_name = url.hostname
+        port = url.port if url.port else (443 if url.scheme == 'https' else 80)
+        sock = socket_s.connect((domain_name, port))
+
+        if self._tunnel_host:
+            self.sock = sock
+            self._tunnel()
+
+        # wrap the socket using verificaiton with the rool certs in trusted_roots_certs
+        self.sock = ssl.wrap_socket(
+            socket_s,
+            keyfile=config.options.pass_key_file_path,
+            certfile=config.options.pass_cert_file_path,
+            server_side=False,
+            ca_certs=config.options.pass_ca_cert_file_path
+        )
+
+# wraps https connections with ssl certificate verification
+class VerifiedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, connection_class=VerifiedHTTPSConnection):
+        self.specialized_conn_class = connection_class
+        urllib.request.HTTPSHandler.__init__(self)
+        
+    def https_open(self, req):
+        return self.do_open(self.specialized_conn_class, req)
 
 def main():
     """
