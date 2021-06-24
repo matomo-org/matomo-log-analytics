@@ -483,6 +483,10 @@ _HAPROXY_FORMAT = (
     r'.*:\ (?P<ip>[\w*.]+).*\[(?P<date>.*)\].*\ (?P<status>\b\d{3}\b)\ (?P<length>\d+)\ -.*\"(?P<method>\S+)\ (?P<path>\S+).*'
 )
 
+_GANDI_SIMPLE_HOSTING_FORMAT = (
+    r'(?P<host>[0-9a-zA-Z-_.]*)\s(?P<ip>[a-zA-Z0-9.]*)\s(\S*)\s(?P<userid>\S*)\s\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s"(?P<method>[A-Z]*)\s(?P<path>[^\s]*)\s([^\s]*)"\s(?P<status>[0-9]*)\s(?P<length>[^\s]*)\s"(?P<referrer>[^\s]*)"\s"(?P<user_agent>[^"]*)"'
+)
+
 FORMATS = {
     'common': RegexFormat('common', _COMMON_LOG_FORMAT),
     'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
@@ -498,7 +502,8 @@ FORMATS = {
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
-    'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f')
+    'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
+    'gandi': RegexFormat('gandi', _GANDI_FORMAT, '%d/%b/%Y:%H:%M:%S')
 }
 
 ##
