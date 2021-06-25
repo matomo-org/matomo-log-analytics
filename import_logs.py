@@ -52,6 +52,7 @@ import socket
 import textwrap
 import collections
 import glob
+import io
 
 # Avoid "got more than 100 headers" error
 http.client._MAXHEADERS = 1000
@@ -1537,9 +1538,10 @@ class MatomoHttpUrllib(MatomoHttpBase):
             self.RedirectHandlerWithLogging(),
             urllib.request.HTTPSHandler(**https_handler_args))
         response = opener.open(request, timeout = timeout)
+        encoding = response.info().get_content_charset('utf-8')
         result = response.read()
         response.close()
-        return result
+        return result.decode(encoding)
 
     def _call_api(self, method, **kwargs):
         """
