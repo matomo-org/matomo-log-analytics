@@ -462,9 +462,6 @@ _NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
 )
 
 
-_GANDI_SIMPLE_HOSTING_FORMAT = (
-    r'(?P<host>[0-9a-zA-Z-_.]*)\s(?P<ip>[a-zA-Z0-9.]*)\s(\S*)\s(?P<userid>\S*)\s\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s"(?P<method>[A-Z]*)\s(?P<path>[^\s]*)\s([^\s]*)"\s(?P<status>[0-9]*)\s(?P<length>[^\s]*)\s"(?P<referrer>[^\s]*)"\s"(?P<user_agent>[^"]*)"'
-)
 _S3_LOG_FORMAT = (
     r'\S+\s+(?P<host>\S+)\s+\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s+(?P<ip>[\w*.:-]+)\s+'
     r'(?P<userid>\S+)\s+\S+\s+\S+\s+\S+\s+"(?P<method>\S+)\s+(?P<path>.*?)\s+\S+"\s+(?P<status>\d+)\s+\S+\s+(?P<length>\S+)\s+'
@@ -490,7 +487,7 @@ _HAPROXY_FORMAT = (
 )
 
 _GANDI_SIMPLE_HOSTING_FORMAT = (
-    r'(?P<host>[0-9a-zA-Z-_.]*)\s(?P<ip>[a-zA-Z0-9.]*)\s(\S*)\s(?P<userid>\S*)\s\[(?P<date>.*?)\s+(?P<timezone>.*?)\]\s\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s"(?P<method>[A-Z]*)\s(?P<path>[^\s]*)\s([^\s]*)"\s(?P<status>[0-9]*)\s(?P<length>[^\s]*)\s"(?P<referrer>[^\s]*)"\s"(?P<user_agent>[^"]*)"'
+    r'(?P<host>[0-9a-zA-Z-_.]+)\s+(?P<ip>[a-zA-Z0-9.]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.+?)\s+(?P<timezone>.+?)\]\s+\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s+"(?P<method>[A-Z]+)\s+(?P<path>[^\s]+)\s+([^\s]+)"\s+(?P<status>[0-9]+)\s+(?P<length>[^\s]+)\s+"(?P<referrer>[^\s]+)"\s+"(?P<user_agent>[^"]+)"'
 )
 
 FORMATS = {
