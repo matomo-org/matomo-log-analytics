@@ -487,7 +487,7 @@ _HAPROXY_FORMAT = (
 )
 
 _GANDI_SIMPLE_HOSTING_FORMAT = (
-    r'(?P<host>[0-9a-zA-Z-_.]+)\s+(?P<ip>[a-zA-Z0-9.]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.+?)\s+(?P<timezone>.+?)\]\s+\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s+"(?P<method>[A-Z]+)\s+(?P<path>[^\s]+)\s+([^\s]+)"\s+(?P<status>[0-9]+)\s+(?P<length>[^\s]+)\s+"(?P<referrer>[^\s]+)"\s+"(?P<user_agent>[^"]+)"'
+    r'(?P<host>[0-9a-zA-Z-_.]+)\s+(?P<ip>[a-zA-Z0-9.]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.+?)\s+(?P<timezone>.+?)\]\s+\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s+"(?P<method>[A-Z]+)\s+(?P<path>\S+)\s+(\S+)"\s+(?P<status>[0-9]+)\s+(?P<length>\S+)\s+"(?P<referrer>\S+)"\s+"(?P<user_agent>[^"]+)"'
 )
 
 FORMATS = {
