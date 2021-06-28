@@ -115,7 +115,7 @@ def test_format_detection():
 
     for format_name in import_logs.FORMATS.keys():
         # w3c extended tested by iis and netscaler log files; amazon cloudfront tested later
-        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'haproxy' or format_name == 'incapsula_w3c':
+        if format_name == 'w3c_extended' or format_name == 'amazon_cloudfront' or format_name == 'ovh' or format_name == 'gandi' or format_name == 'haproxy' or format_name == 'incapsula_w3c':
             continue
 
         # 'Testing autodetection of format ' + format_name
@@ -414,6 +414,9 @@ def check_match_groups(format_name, groups):
     return check_function(groups)
 
 def check_ovh_groups(groups):
+    check_common_complete_groups(groups)
+
+def check_gandi_groups(groups):
     check_common_complete_groups(groups)
 
 def check_haproxy_groups(groups):
@@ -808,6 +811,70 @@ def test_ovh_parsing():
     assert hits[0]['user_agent'] == 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
 
     assert len(hits) == 1
+
+    import_logs.config.options.log_hostname = 'foo'
+
+def test_gandi_parsing():
+    """test parsing of gandi logs (which needs to be forced, as it's not autodetected)"""
+
+    file_ = 'logs/gandi.log'
+
+    # have to override previous globals override for this test
+    import_logs.config.options.custom_w3c_fields = {}
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.config.format = import_logs.FORMATS['gandi']
+    import_logs.config.options.log_hostname = None
+    import_logs.config.options.enable_http_redirects = True
+    import_logs.config.options.enable_http_errors = True
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.options.w3c_time_taken_in_millisecs = False
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == u'301'
+    assert hits[0]['userid'] == 'theuser'
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == '/'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}, 'uid': 'theuser'}
+    assert hits[0]['generation_time_milli'] == 0
+    assert hits[0]['host'] == 'www.example.com'
+    assert hits[0]['filename'] == 'logs/gandi.log'
+    assert hits[0]['is_redirect'] == True
+    assert hits[0]['date'] == datetime.datetime(2012, 2, 10, 21, 42, 0o7)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == '1.2.3.4'
+    assert hits[0]['query_string'] == ''
+    assert hits[0]['path'] == '/'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == '/'
+    assert hits[0]['user_agent'] == 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11'
+
+    assert hits[1]['status'] == u'200'
+    assert hits[1]['userid'] == None
+    assert hits[1]['is_error'] == False
+    assert hits[1]['extension'] == '/'
+    assert hits[1]['is_download'] == False
+    assert hits[1]['referrer'] == u'https://www.example.com/'
+    assert hits[0]['args'] == {'cvar': {1: ['HTTP-method', 'GET']}, 'uid': 'theuser'}
+    assert hits[1]['length'] == 1124
+    assert hits[1]['generation_time_milli'] == 0
+    assert hits[1]['host'] == 'www.example.com'
+    assert hits[1]['filename'] == 'logs/gandi.log'
+    assert hits[1]['is_redirect'] == False
+    assert hits[1]['date'] == datetime.datetime(2012, 2, 10, 21, 42, 0o7)
+    assert hits[1]['lineno'] == 1
+    assert hits[1]['ip'] == u'125.125.125.125'
+    assert hits[1]['query_string'] == u''
+    assert hits[1]['path'] == '/'
+    assert hits[1]['is_robot'] == False
+    assert hits[1]['full_path'] == u'/'
+    assert hits[1]['user_agent'] == u'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:90.0) Gecko/20100101 Firefox/90.0'
+
+    assert len(hits) == 2
 
     import_logs.config.options.log_hostname = 'foo'
 
