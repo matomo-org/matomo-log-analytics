@@ -490,6 +490,11 @@ _GANDI_SIMPLE_HOSTING_FORMAT = (
     r'(?P<host>[0-9a-zA-Z-_.]+)\s+(?P<ip>[a-zA-Z0-9.]+)\s+\S+\s+(?P<userid>\S+)\s+\[(?P<date>.+?)\s+(?P<timezone>.+?)\]\s+\((?P<generation_time_secs>[0-9a-zA-Z\s]*)\)\s+"(?P<method>[A-Z]+)\s+(?P<path>\S+)\s+(\S+)"\s+(?P<status>[0-9]+)\s+(?P<length>\S+)\s+"(?P<referrer>\S+)"\s+"(?P<user_agent>[^"]+)"'
 )
 
+# https://doc.traefik.io/traefik/observability/access-logs/
+_TRAEFIK_FORMAT = ( _NCSA_EXTENDED_LOG_FORMAT +
+    r'\s+(?P<request_count>\d+)\s+"(?P<host>\S+?)"\s+"(?P<server_url>\S+?)"\s+(?P<generation_time_milli>[.\d]+)ms'
+)
+
 FORMATS = {
     'common': RegexFormat('common', _COMMON_LOG_FORMAT),
     'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
@@ -506,7 +511,8 @@ FORMATS = {
     'nginx_json': JsonFormat('nginx_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
-    'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S')
+    'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S'),
+    'traefik': RegexFormat('traefik', _TRAEFIK_FORMAT)
 }
 
 ##
