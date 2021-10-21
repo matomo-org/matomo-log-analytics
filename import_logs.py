@@ -193,6 +193,48 @@ class JsonFormat(BaseFormat):
         for group in groups:
             del self.json[group]
 
+class TraefikJsonFormat(JsonFormat):
+
+    KEYS_MAPPING = {
+        # 'event_category': '',
+        # 'event_action': '',
+        # 'event_name': '',
+        # 'query_string': '',
+        'date': 'time',
+        'generation_time_milli': 'Duration',
+        'host': 'RequestHost',
+        'ip': 'ClientHost',
+        'length': 'DownstreamContentSize',
+        'method': 'RequestMethod',
+        'path': 'RequestPath',
+        'referrer': 'request_Referer',
+        'status': 'OriginStatus',
+        'userid': 'ClientUsername',
+        'user_agent': 'request_User-Agent',
+    }
+
+    def __init__(self, name):
+        super(JsonFormat, self).__init__(name)
+        self.date_format = '%Y-%m-%dT%H:%M:%S'
+
+    def get(self, key):
+        if key not in self.KEYS_MAPPING:
+            raise BaseFormatException()
+
+        if key == 'timezone':
+            return '00:00'
+
+        value = ''
+        if self.KEYS_MAPPING[key] in self.json:
+            value = self.json[self.KEYS_MAPPING[key]]
+
+        if key == 'generation_time_milli':
+            value = value / 100000
+        if key == 'date':
+            value = str(value).replace('Z', '')
+
+        return str(value)
+
 class RegexFormat(BaseFormat):
 
     def __init__(self, name, regex, date_format=None):
@@ -504,6 +546,7 @@ FORMATS = {
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'nginx_json': JsonFormat('nginx_json'),
+    'traefik_json': TraefikJsonFormat('traefik_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S')
