@@ -2009,7 +2009,9 @@ class Recorder:
                 'requests': [self._get_hit_args(hit) for hit in hits]
             }
             try:
-                args = {}
+                args = {
+                    'queuedtracking': '0'
+                }
 
                 if config.options.debug_tracker:
                     args['debug'] = '1'
