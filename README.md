@@ -5,7 +5,7 @@ Import your server logs in Matomo with this powerful and easy to use tool.
 ## Requirements
 
 * Python 3.5, 3.6 or 3.7.
-* Matomo >= 4.0.0
+* Matomo On-Premise >= 4.0.0 or Matomo Cloud. Doesn't work when [Matomo for WordPress](https://wordpress.org/plugins/matomo/) is used.
 
 Build status (master branch) [![Build Status](https://travis-ci.org/matomo-org/matomo-log-analytics.svg?branch=4.x-dev)](https://travis-ci.org/matomo-org/matomo-log-analytics)
 
