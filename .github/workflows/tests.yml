@@ -3,7 +3,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [ 4.x-dev, githubaction ]
+    branches: [ 4.x-dev ]
 
 permissions:
   actions: read
