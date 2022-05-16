@@ -2484,6 +2484,8 @@ class Parser:
             try:
                 hit.referrer = format.get('referrer')
 
+                if hit.referrer is None:
+                    hit.referrer = ''
                 if hit.referrer.startswith('"'):
                     hit.referrer = hit.referrer[1:-1]
             except BaseFormatException:
