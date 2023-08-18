@@ -145,16 +145,22 @@ class BaseFormat:
     def check_format_line(self, line):
         return False
 
-class JsonFormat(BaseFormat):
+class NginxJsonFormat(BaseFormat):
     def __init__(self, name):
-        super(JsonFormat, self).__init__(name)
+        super(NginxJsonFormat, self).__init__(name)
         self.json = None
         self.date_format = '%Y-%m-%dT%H:%M:%S'
 
     def check_format_line(self, line):
         try:
             self.json = json.loads(line)
-            return True
+        
+            # Check if it contains these: "idsite", "referrer", and date". 
+            # This is unique to nginx, we can use this to tell it apart from other json log formats.
+            if "idsite" in self.json and "referrer" in self.json and "date" in self.json:
+                return True
+        
+            return False
         except:
             return False
 
@@ -185,7 +191,7 @@ class JsonFormat(BaseFormat):
             return self.json[key]
         except KeyError:
             raise BaseFormatException()
-
+    
     def get_all(self,):
         return self.json
 
@@ -193,13 +199,9 @@ class JsonFormat(BaseFormat):
         for group in groups:
             del self.json[group]
 
-class TraefikJsonFormat(JsonFormat):
+class TraefikJsonFormat(BaseFormat):
 
-    KEYS_MAPPING = {
-        # 'event_category': '',
-        # 'event_action': '',
-        # 'event_name': '',
-        # 'query_string': '',
+    TRAEFIK_KEYS_MAPPING = {
         'date': 'time',
         'generation_time_milli': 'Duration',
         'host': 'RequestHost',
@@ -208,32 +210,64 @@ class TraefikJsonFormat(JsonFormat):
         'method': 'RequestMethod',
         'path': 'RequestPath',
         'referrer': 'request_Referer',
-        'status': 'OriginStatus',
+        'status': 'DownstreamStatus',
         'userid': 'ClientUsername',
         'user_agent': 'request_User-Agent',
     }
 
     def __init__(self, name):
-        super(JsonFormat, self).__init__(name)
+        super(TraefikJsonFormat, self).__init__(name)
+        self.json = None
         self.date_format = '%Y-%m-%dT%H:%M:%S'
+        
+    def check_format_line(self, line):
+        try:
+            self.json = json.loads(line)
+
+            # Check if it contains all of these: "level", "msg", and "time".
+            # This is unique to Traefik, we can use this to tell it apart from other json log formats.
+            if "msg" in self.json and "level" in self.json and "time" in self.json:
+                return True
+        
+            return False
+        except:
+            return False
+        
+    def match(self, line):
+        try:
+            self.json = json.loads(line)
+            return self
+        except:
+            self.json = None
+            return None
 
     def get(self, key):
-        if key not in self.KEYS_MAPPING:
-            raise BaseFormatException()
-
-        if key == 'timezone':
-            return '00:00'
 
         value = ''
-        if self.KEYS_MAPPING[key] in self.json:
-            value = self.json[self.KEYS_MAPPING[key]]
+        try:
+            value = self.json[self.TRAEFIK_KEYS_MAPPING[key]]
+            
+            if key == 'generation_time_milli':
+                value = value / 1000000
+        
+            # Patch date format ISO 8601, example: 2023-08-14T12:25:56+02:00
+            if key == 'date':
+                tz = value[19:] # get the last part
+                self.json['timezone'] = tz.replace(':', '')
+                value = value[:19]
 
-        if key == 'generation_time_milli':
-            value = value / 100000
-        if key == 'date':
-            value = str(value).replace('Z', '')
+        except:
+            logging.debug("Could not find %s in Traefik log", key)
+            return ''
 
-        return str(value)
+        return str(value)  
+    
+    def get_all(self,):
+        return self.json
+
+    def remove_ignored_groups(self, groups):
+        for group in groups:
+            del self.json[group]
 
 class RegexFormat(BaseFormat):
 
@@ -545,7 +579,7 @@ FORMATS = {
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
-    'nginx_json': JsonFormat('nginx_json'),
+    'nginx_json': NginxJsonFormat('nginx_json'),
     'traefik_json': TraefikJsonFormat('traefik_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
