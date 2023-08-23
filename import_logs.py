@@ -263,7 +263,16 @@ class TraefikJsonFormat(BaseFormat):
         return str(value)  
     
     def get_all(self,):
-        return self.json
+        modified_json = self.json.copy()
+        
+        REVERSED_KEYS_MAPPING = {v: k for k, v in self.TRAEFIK_KEYS_MAPPING.items()}
+
+        for key in self.json:
+            new_key = REVERSED_KEYS_MAPPING.get(key, key)
+            if new_key != key:
+                modified_json[new_key] = modified_json.pop(key)
+        
+        return modified_json
 
     def remove_ignored_groups(self, groups):
         for group in groups:
