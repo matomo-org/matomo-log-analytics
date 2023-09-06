@@ -19,10 +19,16 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
-        python-version: [ '3.5', '3.6', '3.7', '3.8', '3.9', '3.10' ]
+        python-version: [ '3.7', '3.8', '3.9', '3.10' ]
+        operating-system: ubuntu-latest
+        include:
+          - python-version: 3.5
+            operating-system: ubuntu-20.04
+          - python-version: 3.6
+            operating-system: ubuntu-20.04
     name: Tests (Python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
