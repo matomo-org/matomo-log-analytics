@@ -403,6 +403,19 @@ def check_nginx_json_groups(groups):
     assert groups['user_agent'] == 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17'
     assert groups['date'] == '2013-10-10T16:52:00+02:00'
 
+def check_traefik_json_groups(groups):
+    assert groups['date'] == '2023-08-11T11:41:25'
+    assert groups['generation_time_milli'] == 10002425284
+    assert groups['host'] == 'localhost'
+    assert groups['ip'] == '1.2.3.4'
+    assert groups['length'] == 15
+    assert groups['method'] == 'GET'
+    assert groups['path'] == '/my/app/auth?id=1234&user=dude'
+    assert groups['referrer'] == 'www.example.com'
+    assert groups['status'] == '200'
+    assert groups['userid'] == '-'
+    assert groups['user_agent'] == 'Prometheus/2.40.5'
+
 def check_icecast2_groups(groups):
     check_ncsa_extended_groups(groups)
 
