@@ -155,9 +155,9 @@ class NginxJsonFormat(BaseFormat):
         try:
             self.json = json.loads(line)
         
-            # Check if it contains these: "idsite", "referrer", and date". 
-            # This is unique to nginx, we can use this to tell it apart from other json log formats.
-            if "idsite" in self.json and "referrer" in self.json and "date" in self.json:
+            # Check if it contains these: "referrer" and date".
+            # Those are currently not used in other detected json formats, so it should be enough
+            if "referrer" in self.json and "date" in self.json:
                 return True
         
             return False
@@ -588,8 +588,8 @@ FORMATS = {
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
-    'nginx_json': NginxJsonFormat('nginx_json'),
     'traefik_json': TraefikJsonFormat('traefik_json'),
+    'nginx_json': NginxJsonFormat('nginx_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S')
