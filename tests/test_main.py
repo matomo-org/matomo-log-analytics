@@ -440,6 +440,12 @@ def check_haproxy_groups(groups):
     assert groups['length'] == '7456'
     assert groups['method'] == 'POST'
 
+def check_traefik_groups(groups):
+    check_common_complete_groups(groups)
+    assert groups['request_count'] == '3180'
+    assert groups['server_url'] == 'http://172.19.0.4:80'
+    assert groups['generation_time_milli'] == '29'
+
 # parsing tests
 def test_format_parsing():
     # test format regex parses correctly
