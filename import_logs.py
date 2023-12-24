@@ -43,6 +43,7 @@ import ssl
 import sys
 import threading
 import time
+import typing
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import urllib.parse
@@ -273,6 +274,84 @@ class TraefikJsonFormat(BaseFormat):
                 modified_json[new_key] = modified_json.pop(key)
         
         return modified_json
+
+    def remove_ignored_groups(self, groups):
+        for group in groups:
+            del self.json[group]
+
+if typing.TYPE_CHECKING:
+    class CaddyTLS(typing.TypedDict):
+        resumed: bool
+        version: int
+        cipher_suite: int
+        proto: str
+        server_name: str
+
+    class CaddyRequest(typing.TypedDict):
+        remote_ip: str
+        remote_port: int
+        client_ip: str
+        proto: str
+        method: str
+        host: str
+        uri: str
+        headers: typing.Dict[str, typing.List[str]]
+        tls: CaddyTLS
+
+    class CaddyLogElement(typing.TypedDict):
+        level: str
+        ts: float
+        logger: str
+        msg: str
+        request: CaddyRequest
+        bytes_read: int
+        user_id: str
+        duration: float
+        size: int
+        status: int
+        resp_headers: typing.Dict[str, typing.List[str]]
+
+class CaddyJsonFormat(BaseFormat):
+    def __init__(self, name):
+        super(CaddyJsonFormat, self).__init__(name)
+        self.json = None
+        self.date_format = '%Y-%m-%dT%H:%M:%S.%f'
+        
+    def check_format_line(self, line):
+        try:
+            self.json: "CaddyLogElement" = json.loads(line)
+            return "request" in self.json and "user_id" in self.json and "resp_headers" in self.json
+        except:
+            return False
+        
+    def match(self, line):
+        try:
+            self.json: "CaddyLogElement" = json.loads(line)
+            return self
+        except:
+            self.json = None
+            return None
+
+    def get(self, key):
+        try:
+            return self.get_all().get(key)
+        except KeyError:
+            raise BaseFormatException()
+    
+    def get_all(self,):
+        self.json['date'] = datetime.datetime.fromtimestamp(self.json['ts']).strftime(self.date_format)
+        self.json['timezone'] = ''
+        self.json['length'] = str(self.json['size'])
+        self.json['status'] = str(self.json['status'])
+        self.json['generation_time_milli'] = str(self.json['duration'] * 1000.)
+        self.json['userid'] = self.json['user_id']
+        self.json['ip'] = self.json['request']['client_ip']
+        self.json['host'] = self.json['request']['host']
+        self.json['method'] = self.json['request']['method']
+        self.json['path'] = self.json['request']['uri']
+        self.json['referrer'] = next(iter(self.json['request']['headers'].get('Referer', [])), None)
+        self.json['user_agent'] = next(iter(self.json['request']['headers'].get('User-Agent', [])), None)
+        return self.json
 
     def remove_ignored_groups(self, groups):
         for group in groups:
@@ -590,6 +669,7 @@ FORMATS = {
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'traefik_json': TraefikJsonFormat('traefik_json'),
     'nginx_json': NginxJsonFormat('nginx_json'),
+    'caddy_json': CaddyJsonFormat('caddy_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S')
