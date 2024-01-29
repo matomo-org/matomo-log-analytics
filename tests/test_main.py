@@ -421,7 +421,8 @@ def check_traefik_json_groups(groups):
 def check_caddy_json_groups(groups):
     assert groups['ts'] == 1703373474.8155608
     assert groups['duration'] == 0.001335486
-    assert groups['date'] == '2023-12-24T00:17:54.815561'
+    assert groups['date'] == '2023-12-23T23:17:54.815561'
+    assert groups['timezone'] == '+0000'
     assert groups['generation_time_milli'] == '1.3354860000000002'
     assert groups['host'] == 'example.com'
     assert groups['ip'] == '1.2.3.4'
@@ -510,7 +511,7 @@ def test_caddy_json_parsing():
     assert hits[0]['host'] == 'foo'
     assert hits[0]['filename'] == 'logs/caddy_json.log'
     assert hits[0]['is_redirect'] == False
-    assert hits[0]['date'] == datetime.datetime(2023, 12, 24, 0, 17, 54, 815561)
+    assert hits[0]['date'] == datetime.datetime(2023, 12, 23, 23, 17, 54, 815561)
     assert hits[0]['lineno'] == 0
     assert hits[0]['ip'] == '1.2.3.4'
     assert hits[0]['path'] == '/beta/'

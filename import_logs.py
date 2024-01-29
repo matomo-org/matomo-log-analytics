@@ -306,8 +306,10 @@ class CaddyJsonFormat(BaseFormat):
             raise BaseFormatException()
     
     def get_all(self,):
-        self.json['date'] = datetime.datetime.fromtimestamp(self.json['ts']).strftime(self.date_format)
-        self.json['timezone'] = ''
+        tz = datetime.timezone.utc
+        date = datetime.datetime.fromtimestamp(self.json['ts'], tz=tz)
+        self.json['date'] = date.strftime(self.date_format)
+        self.json['timezone'] = date.strftime('%z')
         self.json['length'] = str(self.json['size'])
         self.json['status'] = str(self.json['status'])
         self.json['generation_time_milli'] = str(self.json['duration'] * 1000.)
