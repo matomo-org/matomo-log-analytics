@@ -43,7 +43,6 @@ import ssl
 import sys
 import threading
 import time
-import typing
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import urllib.parse
@@ -279,38 +278,6 @@ class TraefikJsonFormat(BaseFormat):
         for group in groups:
             del self.json[group]
 
-if typing.TYPE_CHECKING:
-    class CaddyTLS(typing.TypedDict):
-        resumed: bool
-        version: int
-        cipher_suite: int
-        proto: str
-        server_name: str
-
-    class CaddyRequest(typing.TypedDict):
-        remote_ip: str
-        remote_port: int
-        client_ip: str
-        proto: str
-        method: str
-        host: str
-        uri: str
-        headers: typing.Dict[str, typing.List[str]]
-        tls: CaddyTLS
-
-    class CaddyLogElement(typing.TypedDict):
-        level: str
-        ts: float
-        logger: str
-        msg: str
-        request: CaddyRequest
-        bytes_read: int
-        user_id: str
-        duration: float
-        size: int
-        status: int
-        resp_headers: typing.Dict[str, typing.List[str]]
-
 class CaddyJsonFormat(BaseFormat):
     def __init__(self, name):
         super(CaddyJsonFormat, self).__init__(name)
@@ -319,14 +286,14 @@ class CaddyJsonFormat(BaseFormat):
         
     def check_format_line(self, line):
         try:
-            self.json: "CaddyLogElement" = json.loads(line)
+            self.json = json.loads(line)
             return "request" in self.json and "user_id" in self.json and "resp_headers" in self.json
         except:
             return False
         
     def match(self, line):
         try:
-            self.json: "CaddyLogElement" = json.loads(line)
+            self.json = json.loads(line)
             return self
         except:
             self.json = None
