@@ -2,8 +2,10 @@ name: Tests
 
 on:
   pull_request:
+    types: [opened, synchronize]
   push:
-    branches: [ 4.x-dev ]
+    branches:
+      - '**.x-dev'
 
 permissions:
   actions: read
