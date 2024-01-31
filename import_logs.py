@@ -278,6 +278,54 @@ class TraefikJsonFormat(BaseFormat):
         for group in groups:
             del self.json[group]
 
+class CaddyJsonFormat(BaseFormat):
+    def __init__(self, name):
+        super(CaddyJsonFormat, self).__init__(name)
+        self.json = None
+        self.date_format = '%Y-%m-%dT%H:%M:%S.%f'
+        
+    def check_format_line(self, line):
+        try:
+            self.json = json.loads(line)
+            return "request" in self.json and "user_id" in self.json and "resp_headers" in self.json
+        except:
+            return False
+        
+    def match(self, line):
+        try:
+            self.json = json.loads(line)
+            return self
+        except:
+            self.json = None
+            return None
+
+    def get(self, key):
+        try:
+            return self.get_all().get(key)
+        except KeyError:
+            raise BaseFormatException()
+    
+    def get_all(self,):
+        tz = datetime.timezone.utc
+        date = datetime.datetime.fromtimestamp(self.json['ts'], tz=tz)
+        self.json['date'] = date.strftime(self.date_format)
+        self.json['timezone'] = date.strftime('%z')
+        self.json['length'] = str(self.json['size'])
+        self.json['status'] = str(self.json['status'])
+        self.json['generation_time_milli'] = str(self.json['duration'] * 1000.)
+        self.json['userid'] = self.json['user_id']
+        self.json['ip'] = self.json['request']['client_ip']
+        self.json['host'] = self.json['request']['host']
+        self.json['method'] = self.json['request']['method']
+        self.json['path'] = self.json['request']['uri']
+        self.json['referrer'] = next(iter(self.json['request']['headers'].get('Referer', [])), None)
+        self.json['user_agent'] = next(iter(self.json['request']['headers'].get('User-Agent', [])), None)
+        return self.json
+
+    def remove_ignored_groups(self, groups):
+        for group in groups:
+            del self.json[group]
+
 class RegexFormat(BaseFormat):
 
     def __init__(self, name, regex, date_format=None):
@@ -590,6 +638,7 @@ FORMATS = {
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
     'traefik_json': TraefikJsonFormat('traefik_json'),
     'nginx_json': NginxJsonFormat('nginx_json'),
+    'caddy_json': CaddyJsonFormat('caddy_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S')

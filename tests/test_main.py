@@ -85,6 +85,8 @@ def test_format_detection():
         assert(format.name == format_name)
 
     def _test_multiple_spaces(format_name, log_file = None):
+        if format_name == 'caddy_json':
+            return
         if log_file is None:
             log_file = 'logs/%s.log' % format_name
 
@@ -416,6 +418,22 @@ def check_traefik_json_groups(groups):
     assert groups['userid'] == '-'
     assert groups['user_agent'] == 'Prometheus/2.40.5'
 
+def check_caddy_json_groups(groups):
+    assert groups['ts'] == 1703373474.8155608
+    assert groups['duration'] == 0.001335486
+    assert groups['date'] == '2023-12-23T23:17:54.815561'
+    assert groups['timezone'] == '+0000'
+    assert groups['generation_time_milli'] == '1.3354860000000002'
+    assert groups['host'] == 'example.com'
+    assert groups['ip'] == '1.2.3.4'
+    assert groups['length'] == '3609'
+    assert groups['method'] == 'GET'
+    assert groups['path'] == '/beta/'
+    assert groups['referrer'] == None
+    assert groups['status'] == '200'
+    assert groups['userid'] == ''
+    assert groups['user_agent'] == 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+
 def check_icecast2_groups(groups):
     check_ncsa_extended_groups(groups)
 
@@ -465,6 +483,41 @@ def test_format_parsing():
 
     # 'Testing parsing of format "common" with ncsa_extended log'
     _test( 'common', 'logs/ncsa_extended.log')
+
+def test_caddy_json_parsing():
+    """test parsing of caddy_json.log file"""
+
+    file_ = 'logs/caddy_json.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.replay_tracking = False
+    import_logs.config.format = None
+    import_logs.resolver = Resolver()
+    import_logs.parser = import_logs.Parser()
+    import_logs.Recorder = Recorder()
+    Recorder.recorders = []
+    import_logs.parser.parse(file_)
+
+    hits = [hit.__dict__ for hit in Recorder.recorders]
+
+    assert hits[0]['status'] == '200'
+    assert hits[0]['is_error'] == False
+    assert hits[0]['extension'] == '/beta/'
+    assert hits[0]['is_download'] == False
+    assert hits[0]['referrer'] == ''
+    assert hits[0]['generation_time_milli'] == 1.3354860000000002
+    assert hits[0]['host'] == 'foo'
+    assert hits[0]['filename'] == 'logs/caddy_json.log'
+    assert hits[0]['is_redirect'] == False
+    assert hits[0]['date'] == datetime.datetime(2023, 12, 23, 23, 17, 54, 815561)
+    assert hits[0]['lineno'] == 0
+    assert hits[0]['ip'] == '1.2.3.4'
+    assert hits[0]['path'] == '/beta/'
+    assert hits[0]['is_robot'] == False
+    assert hits[0]['full_path'] == '/beta/'
+    assert hits[0]['user_agent'] == 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
 
 def test_iis_custom_format():
     """test IIS custom format name parsing."""
