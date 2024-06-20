@@ -318,8 +318,8 @@ class CaddyJsonFormat(BaseFormat):
         self.json['host'] = self.json['request']['host']
         self.json['method'] = self.json['request']['method']
         self.json['path'] = self.json['request']['uri']
-        self.json['referrer'] = next(iter(self.json['request']['headers'].get('Referer', [])), None)
-        self.json['user_agent'] = next(iter(self.json['request']['headers'].get('User-Agent', [])), None)
+        self.json['referrer'] = next(iter(self.json['request']['headers'].get('Referer', [])), '')
+        self.json['user_agent'] = next(iter(self.json['request']['headers'].get('User-Agent', [])), '')
         return self.json
 
     def remove_ignored_groups(self, groups):
