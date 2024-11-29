@@ -62,7 +62,7 @@ http.client._MAXHEADERS = 1000
 ##
 
 STATIC_EXTENSIONS = set((
-    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp'
+    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp avif'
 ).split())
 
 STATIC_FILES = set((
