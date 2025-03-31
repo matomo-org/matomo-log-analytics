@@ -2633,6 +2633,8 @@ class Parser:
 
                 # in case a format parser included enclosing quotes, remove them so they are not
                 # sent to Matomo
+                if hit.user_agent is None:
+                    hit.user_agent = ''
                 if hit.user_agent.startswith('"'):
                     hit.user_agent = hit.user_agent[1:-1]
             except BaseFormatException:
