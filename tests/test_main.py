@@ -939,7 +939,7 @@ def test_gandi_parsing():
     assert hits[1]['is_redirect'] == False
     assert hits[1]['date'] == datetime.datetime(2012, 2, 10, 21, 42, 0o7)
     assert hits[1]['lineno'] == 1
-    assert hits[1]['ip'] == u'125.125.125.125'
+    assert hits[1]['ip'] == u'2001:0db8:85a3:0000:0000:8a2e:0370:7334'
     assert hits[1]['query_string'] == u''
     assert hits[1]['path'] == '/'
     assert hits[1]['is_robot'] == False
