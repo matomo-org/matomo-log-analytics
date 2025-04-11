@@ -2631,10 +2631,10 @@ class Parser:
             try:
                 hit.user_agent = format.get('user_agent')
 
-                # in case a format parser included enclosing quotes, remove them so they are not
-                # sent to Matomo
                 if hit.user_agent is None:
                     hit.user_agent = ''
+                # in case a format parser included enclosing quotes, remove them so they are not
+                # sent to Matomo
                 if hit.user_agent.startswith('"'):
                     hit.user_agent = hit.user_agent[1:-1]
             except BaseFormatException:
