@@ -326,85 +326,6 @@ class CaddyJsonFormat(BaseFormat):
         for group in groups:
             del self.json[group]
 
-class TraefikJsonFormat(BaseFormat):
-
-    TRAEFIK_KEYS_MAPPING = {
-        'date': 'time',
-        'generation_time_milli': 'Duration',
-        'host': 'RequestHost',
-        'ip': 'ClientHost',
-        'length': 'DownstreamContentSize',
-        'method': 'RequestMethod',
-        'path': 'RequestPath',
-        'referrer': 'request_Referer',
-        'status': 'DownstreamStatus',
-        'userid': 'ClientUsername',
-        'user_agent': 'request_User-Agent',
-    }
-
-    def __init__(self, name):
-        super(TraefikJsonFormat, self).__init__(name)
-        self.json = None
-        self.date_format = '%Y-%m-%dT%H:%M:%S'
-        
-    def check_format_line(self, line):
-        try:
-            self.json = json.loads(line)
-
-            # Check if it contains all of these: "level", "msg", and "time".
-            # This is unique to Traefik, we can use this to tell it apart from other json log formats.
-            if "msg" in self.json and "level" in self.json and "time" in self.json:
-                return True
-        
-            return False
-        except:
-            return False
-        
-    def match(self, line):
-        try:
-            self.json = json.loads(line)
-            return self
-        except:
-            self.json = None
-            return None
-
-    def get(self, key):
-
-        value = ''
-        try:
-            value = self.json[self.TRAEFIK_KEYS_MAPPING[key]]
-            
-            if key == 'generation_time_milli':
-                value = value / 1000000
-        
-            # Patch date format ISO 8601, example: 2023-08-14T12:25:56+02:00
-            if key == 'date':
-                tz = value[19:] # get the last part
-                self.json['timezone'] = tz.replace(':', '')
-                value = value[:19]
-
-        except:
-            logging.debug("Could not find %s in Traefik log", key)
-            return ''
-
-        return str(value)  
-    
-    def get_all(self,):
-        modified_json = self.json.copy()
-        
-        REVERSED_KEYS_MAPPING = {v: k for k, v in self.TRAEFIK_KEYS_MAPPING.items()}
-
-        for key in self.json:
-            new_key = REVERSED_KEYS_MAPPING.get(key, key)
-            if new_key != key:
-                modified_json[new_key] = modified_json.pop(key)
-        
-        return modified_json
-
-    def remove_ignored_groups(self, groups):
-        for group in groups:
-            del self.json[group]
-
 class RegexFormat(BaseFormat):
 
     def __init__(self, name, regex, date_format=None):
@@ -723,7 +644,6 @@ FORMATS = {
     'traefik_json': TraefikJsonFormat('traefik_json'),
     'nginx_json': NginxJsonFormat('nginx_json'),
     'caddy_json': CaddyJsonFormat('caddy_json'),
-    'traefik_json': TraefikJsonFormat('traefik_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S'),
