@@ -2,8 +2,10 @@ name: Tests
 
 on:
   pull_request:
+    types: [opened, synchronize]
   push:
-    branches: [ 4.x-dev ]
+    branches:
+      - '**.x-dev'
 
 permissions:
   actions: read
@@ -22,20 +24,17 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10' ]
+        python-version: [ '3.8', '3.9', '3.10', '3.13' ]
         operating-system: [ 'ubuntu-latest' ]
-        include:
-          - python-version: 3.5
-            operating-system: ubuntu-20.04
-          - python-version: 3.6
-            operating-system: ubuntu-20.04
     name: Tests (Python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+        env:
+          PIP_TRUSTED_HOST: "pypi.python.org pypi.org files.pythonhosted.org"
       - name: Install Pytest
         run: |
           pip install --upgrade pip

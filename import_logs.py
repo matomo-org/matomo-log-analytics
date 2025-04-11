@@ -62,7 +62,7 @@ http.client._MAXHEADERS = 1000
 ##
 
 STATIC_EXTENSIONS = set((
-    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp'
+    'gif jpg jpeg png bmp ico svg svgz ttf otf eot woff woff2 class swf css js xml webp avif'
 ).split())
 
 STATIC_FILES = set((
@@ -155,9 +155,9 @@ class NginxJsonFormat(BaseFormat):
         try:
             self.json = json.loads(line)
         
-            # Check if it contains these: "idsite", "referrer", and date". 
-            # This is unique to nginx, we can use this to tell it apart from other json log formats.
-            if "idsite" in self.json and "referrer" in self.json and "date" in self.json:
+            # Check if it contains these: "referrer" and date".
+            # Those are currently not used in other detected json formats, so it should be enough
+            if "referrer" in self.json and "date" in self.json:
                 return True
         
             return False
@@ -193,6 +193,133 @@ class NginxJsonFormat(BaseFormat):
             raise BaseFormatException()
     
     def get_all(self,):
+        return self.json
+
+    def remove_ignored_groups(self, groups):
+        for group in groups:
+            del self.json[group]
+
+class TraefikJsonFormat(BaseFormat):
+
+    TRAEFIK_KEYS_MAPPING = {
+        'date': 'time',
+        'generation_time_milli': 'Duration',
+        'host': 'RequestHost',
+        'ip': 'ClientHost',
+        'length': 'DownstreamContentSize',
+        'method': 'RequestMethod',
+        'path': 'RequestPath',
+        'referrer': 'request_Referer',
+        'status': 'DownstreamStatus',
+        'userid': 'ClientUsername',
+        'user_agent': 'request_User-Agent',
+    }
+
+    def __init__(self, name):
+        super(TraefikJsonFormat, self).__init__(name)
+        self.json = None
+        self.date_format = '%Y-%m-%dT%H:%M:%S'
+        
+    def check_format_line(self, line):
+        try:
+            self.json = json.loads(line)
+
+            # Check if it contains all of these: "level", "msg", and "time".
+            # This is unique to Traefik, we can use this to tell it apart from other json log formats.
+            if "msg" in self.json and "level" in self.json and "time" in self.json:
+                return True
+        
+            return False
+        except:
+            return False
+        
+    def match(self, line):
+        try:
+            self.json = json.loads(line)
+            return self
+        except:
+            self.json = None
+            return None
+
+    def get(self, key):
+
+        value = ''
+        try:
+            value = self.json[self.TRAEFIK_KEYS_MAPPING[key]]
+            
+            if key == 'generation_time_milli':
+                value = value / 1000000
+        
+            # Patch date format ISO 8601, example: 2023-08-14T12:25:56+02:00
+            if key == 'date':
+                tz = value[19:] # get the last part
+                self.json['timezone'] = tz.replace(':', '')
+                value = value[:19]
+
+        except:
+            logging.debug("Could not find %s in Traefik log", key)
+            return ''
+
+        return str(value)  
+    
+    def get_all(self,):
+        modified_json = self.json.copy()
+        
+        REVERSED_KEYS_MAPPING = {v: k for k, v in self.TRAEFIK_KEYS_MAPPING.items()}
+
+        for key in self.json:
+            new_key = REVERSED_KEYS_MAPPING.get(key, key)
+            if new_key != key:
+                modified_json[new_key] = modified_json.pop(key)
+        
+        return modified_json
+
+    def remove_ignored_groups(self, groups):
+        for group in groups:
+            del self.json[group]
+
+class CaddyJsonFormat(BaseFormat):
+    def __init__(self, name):
+        super(CaddyJsonFormat, self).__init__(name)
+        self.json = None
+        self.date_format = '%Y-%m-%dT%H:%M:%S.%f'
+        
+    def check_format_line(self, line):
+        try:
+            self.json = json.loads(line)
+            return "request" in self.json and "user_id" in self.json and "resp_headers" in self.json
+        except:
+            return False
+        
+    def match(self, line):
+        try:
+            self.json = json.loads(line)
+            return self
+        except:
+            self.json = None
+            return None
+
+    def get(self, key):
+        try:
+            return self.get_all().get(key)
+        except KeyError:
+            raise BaseFormatException()
+    
+    def get_all(self,):
+        tz = datetime.timezone.utc
+        date = datetime.datetime.fromtimestamp(self.json['ts'], tz=tz)
+        self.json['date'] = date.strftime(self.date_format)
+        self.json['timezone'] = date.strftime('%z')
+        self.json['length'] = str(self.json['size'])
+        self.json['status'] = str(self.json['status'])
+        self.json['generation_time_milli'] = str(self.json['duration'] * 1000.)
+        self.json['userid'] = self.json['user_id']
+        self.json['ip'] = self.json['request']['client_ip']
+        self.json['host'] = self.json['request']['host']
+        self.json['method'] = self.json['request']['method']
+        self.json['path'] = self.json['request']['uri']
+        self.json['referrer'] = next(iter(self.json['request']['headers'].get('Referer', [])), None)
+        self.json['user_agent'] = next(iter(self.json['request']['headers'].get('User-Agent', [])), None)
         return self.json
 
     def remove_ignored_groups(self, groups):
@@ -593,7 +720,9 @@ FORMATS = {
     's3': RegexFormat('s3', _S3_LOG_FORMAT),
     'icecast2': RegexFormat('icecast2', _ICECAST2_LOG_FORMAT),
     'elb': RegexFormat('elb', _ELB_LOG_FORMAT, '%Y-%m-%dT%H:%M:%S'),
+    'traefik_json': TraefikJsonFormat('traefik_json'),
     'nginx_json': NginxJsonFormat('nginx_json'),
+    'caddy_json': CaddyJsonFormat('caddy_json'),
     'traefik_json': TraefikJsonFormat('traefik_json'),
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
@@ -2588,6 +2717,8 @@ class Parser:
             try:
                 hit.user_agent = format.get('user_agent')
 
+                if hit.user_agent is None:
+                    hit.user_agent = ''
                 # in case a format parser included enclosing quotes, remove them so they are not
                 # sent to Matomo
                 if hit.user_agent.startswith('"'):
