@@ -589,6 +589,65 @@ class AmazonCloudFrontFormat(W3cExtendedFormat):
         else:
             return super(AmazonCloudFrontFormat, self).get(key)
 
+# https://support.bunny.net/hc/en-us/articles/115001917451-bunny-net-CDN-raw-log-format-explained
+class BunnyFormat(BaseFormat):
+    def __init__(self, name='bunny'):
+        super(BunnyFormat, self).__init__(name)
+        self.date_format = '%Y-%m-%d %H:%M:%S'  # Not used since date is a unix timestamp
+        self.fields = [
+            'cache_status', 'status', 'timestamp', 'length', 'pull_zone_id',
+            'ip', 'referrer', 'url', 'edge_location', 'user_agent',
+            'request_id', 'country'
+        ]
+        self.matched = None
+
+    def check_format_line(self, line):
+        return self.match(line) is not None
+
+    def match(self, line):
+        parts = line.strip().split('|')
+        if len(parts) != len(self.fields):
+            self.matched = None
+            return None
+        self.matched = dict(zip(self.fields, parts))
+
+        # Convert timestamp to datetime
+        try:
+            ts = int(self.matched['timestamp']) / 1000.0  # Convert from ms to s
+            dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+            self.matched['date'] = dt.strftime(self.date_format)
+            self.matched['timezone'] = '+0000'
+        except Exception:
+            self.matched['date'] = ''
+            self.matched['timezone'] = ''
+
+        # Extract path from URL
+        try:
+            parsed_url = urllib.parse.urlparse(self.matched['url'])
+            self.matched['path'] = parsed_url.path or '/'
+            self.matched['host'] = parsed_url.hostname
+            self.matched['query_string'] = parsed_url.query
+        except Exception:
+            self.matched['path'] = ''
+            self.matched['host'] = ''
+            self.matched['query_string'] = ''
+        return self
+
+    def get(self, key):
+        try:
+            return self.matched[key]
+        except KeyError:
+            raise BaseFormatException(f"Key '{key}' not found")
+
+    def get_all(self):
+        return self.matched if self.matched else None
+
+    def remove_ignored_groups(self, groups):
+        if not self.matched:
+            return
+        for group in groups:
+            self.matched.pop(group, None)
+
 _HOST_PREFIX = r'(?P<host>[\w\-\.]*)(?::\d+)?\s+'
 
 _COMMON_LOG_FORMAT = (
@@ -652,7 +711,8 @@ FORMATS = {
     'ovh': RegexFormat('ovh', _OVH_FORMAT),
     'haproxy': RegexFormat('haproxy', _HAPROXY_FORMAT, '%d/%b/%Y:%H:%M:%S.%f'),
     'gandi': RegexFormat('gandi', _GANDI_SIMPLE_HOSTING_FORMAT, '%d/%b/%Y:%H:%M:%S'),
-    'traefik': RegexFormat('traefik', _TRAEFIK_FORMAT)
+    'traefik': RegexFormat('traefik', _TRAEFIK_FORMAT),
+    'bunny': BunnyFormat('bunny')
 }
 
 ##
