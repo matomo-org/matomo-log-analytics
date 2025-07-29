@@ -402,11 +402,59 @@ Use matomolog %v vhost_common main " "
 </VirtualHost>
 ```
 
-### License
+## Complete list of options
+
+### Main options
+
+| Option               | Description                                                  |
+|----------------------|--------------------------------------------------------------|
+| `--url`              | **Required**: URL of the Matomo server                       |
+| `--idsite`           | Site ID in Matomo                                            |
+| `--token-auth`       | Authentication token (admin required)                        |
+| `--dry-run`          | Simulate import without inserting data                       |
+| `--debug`            | Enable debug logging (repeat for more verbosity)             |
+| `--show-progress`    | Show real-time progress during import                        |
+| `--recorders`        | Number of parallel processes (default: 1)                    |
+| `--log-format-name`  | Log format (`common`, `nginx_json`, etc.)                    |
+| `--log-format-regex` | Custom regex for parsing logs                                |
+| `--log-date-format`  | Custom date format used in logs                              |
+
+### Filtering and exclusion options
+
+| Option                   | Description                                               |
+|--------------------------|-----------------------------------------------------------|
+| `--hostname`             | Include logs from specific hostnames                      |
+| `--exclude-path`         | Exclude specific URL paths                                |
+| `--include-path`         | Include only specific URL paths                           |
+| `--exclude-older-than`   | Skip logs older than a given date                         |
+| `--exclude-newer-than`   | Skip logs newer than a given date                         |
+| `--exclude-host`         | Exclude logs from specific hosts                          |
+| `--include-host`         | Include logs from specific hosts                          |
+
+### Behavioral flags
+
+| Option                    | Description                                               |
+|---------------------------|-----------------------------------------------------------|
+| `--enable-bots`           | Include bot visits                                        |
+| `--enable-static`         | Include static files (CSS, JS, images)                    |
+| `--enable-http-errors`    | Include HTTP errors (4xx, 5xx)                            |
+| `--enable-http-redirects` | Include HTTP redirects (3xx)                              |
+| `--reverse-dns`           | Perform reverse DNS lookup on IPs (slower)               |
+
+### Other
+
+| Option           | Description                                                      |
+|------------------|------------------------------------------------------------------|
+| `--auth-user`    | HTTP basic auth username                                         |
+| `--auth-password`| HTTP basic auth password                                         |
+| `--config`       | Path to Matomo’s `config.ini.php`                                |
+| `--output`       | Redirect output to a file                                        |
+| `--skip`         | Skip the first N lines of the log file                           |
+
+## License
 
 As [matomo](`https://github.com/matomo-org/matomo`) (which includes this code as a git reference), matomo-log-analytics is released under the GPLv3 or later.  Please refer to  [LEGALNOTICE](LEGALNOTICE) for copyright and trademark statements and [LICENSE.txt](LICENSE.txt) for the full text of the GPLv3.
 
-### And that's all !
-
+## And that's all !
 
 ***This documentation is a community effort, we welcome your pull requests to [improve this documentation](https://github.com/matomo-org/matomo-log-analytics/edit/master/README.md).***
