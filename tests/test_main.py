@@ -1246,6 +1246,57 @@ def test_glob_filenames():
 
     assert config.filenames == ['logs/common.log', 'logs/common_complete.log', 'logs/common_encoding_big5.log', 'logs/common_vhost.log', 'logs/elb.log']
 
+def test_auth_config_sets_token_auth(tmp_path):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = test_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    config = import_logs.Configuration(argv)
+
+    assert config.options.matomo_token_auth == 'test_token'
+
+def test_auth_config_login_password_used_for_token_fetch(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\nlogin = superuser\npassword = secret\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    config = import_logs.Configuration(argv)
+
+    class DummyMatomo:
+        def call_api(self, method, **kwargs):
+            assert method == 'UsersManager.createAppSpecificTokenAuth'
+            assert kwargs['userLogin'] == 'superuser'
+            assert kwargs['passwordConfirmation'] == 'secret'
+            return {'value': 'generated_token'}
+
+    monkeypatch.setattr(import_logs, 'matomo', DummyMatomo(), raising=False)
+
+    assert config._get_token_auth() == 'generated_token'
+
+def test_insecure_cli_auth_args_emit_deprecation_warning(caplog):
+    argv = ["--url=http://localhost", "--token-auth=abcd", "-"]
+    import_logs.Configuration(argv)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any('DEPRECATION WARNING' in message for message in messages)
+    assert any('--token-auth' in message for message in messages)
+
+def test_auth_config_permissions_warning(tmp_path, caplog):
+    if os.name == 'nt':
+        return
+
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = test_token\n')
+    os.chmod(str(auth_config), 0o644)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    import_logs.Configuration(argv)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any('overly permissive permissions' in message for message in messages)
+
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
     def _test(input, expected):
