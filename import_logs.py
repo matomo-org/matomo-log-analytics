@@ -1316,7 +1316,9 @@ class Configuration:
             success = len(config_file.read(self.options.config_file)) > 0
             if not success:
                 fatal_error(
-                    "the configuration file" + self.options.config_file + " could not be read. Please check permission. This file must be readable by the user running this script to get the authentication token"
+                    "No authentication was provided and the configuration file '%s' could not be read "
+                    "(missing or unreadable). If your Matomo instance is remote/external, use --auth-config "
+                    "to provide credentials securely." % self.options.config_file
                 )
 
             updatetokenfile = os.path.abspath(

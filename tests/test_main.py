@@ -1297,6 +1297,22 @@ def test_auth_config_permissions_warning(tmp_path, caplog):
     messages = [record.getMessage() for record in caplog.records]
     assert any('overly permissive permissions' in message for message in messages)
 
+def test_missing_config_file_error_mentions_auth_config(monkeypatch):
+    config = import_logs.Configuration(["--url=http://localhost", "--config=/tmp/definitely_missing_config_file.ini.php", "-"])
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        config._get_token_auth()
+        assert False
+    except RuntimeError as e:
+        message = str(e)
+        assert 'No authentication was provided' in message
+        assert '--auth-config' in message
+
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
     def _test(input, expected):
