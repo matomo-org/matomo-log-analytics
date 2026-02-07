@@ -777,7 +777,7 @@ class Configuration:
         parser.add_argument(
             '--config', dest='config_file', default=default_config,
             help=(
-                "This is only used when --auth-config or --login/--password are not used. "
+                "This is only used when --auth-config, --token-auth, or --login/--password are not used. "
                 "Matomo will read the configuration file (default: %(default)s) to "
                 "fetch the Super User token_auth from the config file. "
             )
@@ -1087,16 +1087,16 @@ class Configuration:
 
         return date
 
-    def _warn_if_insecure_auth_options_used(self, argv):
-        def has_option(name):
-            return any(arg == name or arg.startswith(name + '=') for arg in argv)
+    def _has_option(self, argv, name):
+        return any(arg == name or arg.startswith(name + '=') for arg in argv)
 
+    def _warn_if_insecure_auth_options_used(self, argv):
         insecure_options = []
-        if has_option('--token-auth'):
+        if self._has_option(argv, '--token-auth'):
             insecure_options.append('--token-auth')
-        if has_option('--login'):
+        if self._has_option(argv, '--login'):
             insecure_options.append('--login')
-        if has_option('--password'):
+        if self._has_option(argv, '--password'):
             insecure_options.append('--password')
 
         if insecure_options:
@@ -1142,9 +1142,7 @@ class Configuration:
         password = auth_config.get('auth', 'password', fallback='').strip()
 
         if token_auth:
-            if not self.options.matomo_token_auth:
-                self.options.matomo_token_auth = token_auth
-            return
+            return {'token_auth': token_auth, 'login': None, 'password': None}
 
         if login or password:
             if not login or not password:
@@ -1153,16 +1151,55 @@ class Configuration:
                     % filename
                 )
 
-            if not self.options.login:
-                self.options.login = login
-            if not self.options.password:
-                self.options.password = password
-            return
+            return {'token_auth': None, 'login': login, 'password': password}
 
         fatal_error(
             "Authentication config file '%s' does not contain token_auth or login/password in the [auth] section."
             % filename
         )
+
+    def _apply_auth_precedence(self, argv):
+        cli_has_token_auth = self._has_option(argv, '--token-auth')
+        cli_has_login = self._has_option(argv, '--login')
+        cli_has_password = self._has_option(argv, '--password')
+
+        auth_config_credentials = None
+        if self.options.auth_config_file:
+            auth_config_credentials = self._load_auth_config(self.options.auth_config_file)
+
+        # Explicit source precedence:
+        # 1) CLI --token-auth
+        # 2) CLI --login + --password
+        # 3) --auth-config (token_auth, else login/password)
+        # 4) --config fallback in _get_token_auth()
+        if cli_has_token_auth:
+            if self.options.auth_config_file:
+                logging.info("Ignoring --auth-config credentials because --token-auth was provided.")
+            self.options.login = None
+            self.options.password = None
+            return
+
+        if cli_has_login or cli_has_password:
+            if not cli_has_login or not cli_has_password:
+                fatal_error("Options --login and --password must be used together.")
+            if self.options.auth_config_file:
+                logging.info("Ignoring --auth-config credentials because --login/--password were provided.")
+            self.options.matomo_token_auth = None
+            return
+
+        self.options.login = None
+        self.options.password = None
+
+        if not auth_config_credentials:
+            return
+
+        if auth_config_credentials['token_auth']:
+            self.options.matomo_token_auth = auth_config_credentials['token_auth']
+            return
+
+        self.options.matomo_token_auth = None
+        self.options.login = auth_config_credentials['login']
+        self.options.password = auth_config_credentials['password']
 
     def _parse_args(self, option_parser, argv = None):
         """
@@ -1192,9 +1229,7 @@ class Configuration:
         )
 
         self._warn_if_insecure_auth_options_used(argv)
-
-        if self.options.auth_config_file:
-            self._load_auth_config(self.options.auth_config_file)
+        self._apply_auth_precedence(argv)
 
         self.options.excluded_useragents = set([s.lower() for s in self.options.excluded_useragents])
 

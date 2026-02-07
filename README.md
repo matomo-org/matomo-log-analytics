@@ -81,8 +81,14 @@ Security notes:
 
 Authentication methods:
 * `--auth-config` (recommended): load credentials from `[auth]` in a file (`token_auth`, or `login` + `password`).
-* `--token-auth`, `--login`, `--password` (deprecated/insecure via CLI): still supported for compatibility. `--login`/`--password` requests an app-specific token through the Matomo API.
+* `--token-auth`, `--login`, `--password` (deprecated/insecure via CLI): still supported for compatibility. `--login` and `--password` must be provided together; they request an app-specific token through the Matomo API.
 * `--config` fallback: intended for local Matomo installs, because it uses Matomo's local `misc/cron/updatetoken.php` script and a local `config.ini.php`.
+
+Authentication precedence (highest to lowest):
+* CLI `--token-auth`
+* CLI `--login` + `--password`
+* `--auth-config` (`token_auth`, or `login` + `password`)
+* `--config` fallback
 
 The default mode will try to mimic the Javascript tracker as much as possible,
 and will not track bots, static files, or error requests.
