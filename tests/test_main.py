@@ -1318,6 +1318,104 @@ def test_cli_token_auth_takes_precedence_over_auth_config(tmp_path):
     assert config.options.login is None
     assert config.options.password is None
 
+def test_cli_token_auth_ignores_missing_auth_config(monkeypatch):
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--auth-config=/tmp/definitely_missing_auth_config.cfg",
+        "--token-auth=cli_token",
+        "-"
+    ])
+
+    assert config.options.matomo_token_auth == 'cli_token'
+
+def test_double_dash_stops_auth_option_detection(monkeypatch, caplog):
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--",
+        "-",
+        "--token-auth=fake.log",
+    ])
+
+    messages = [record.getMessage() for record in caplog.records]
+
+    assert config.options.matomo_token_auth is None
+    assert not any('DEPRECATION WARNING' in message for message in messages)
+
+def test_cli_login_password_ignores_invalid_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'invalid_auth.cfg'
+    auth_config.write_text('[not_auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--auth-config=%s" % str(auth_config),
+        "--login=cli_user",
+        "--password=cli_secret",
+        "-"
+    ])
+
+    assert config.options.login == 'cli_user'
+    assert config.options.password == 'cli_secret'
+    assert config.options.matomo_token_auth is None
+
+def test_cli_empty_token_auth_raises_error_even_with_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration([
+            "--url=http://localhost",
+            "--auth-config=%s" % str(auth_config),
+            "--token-auth=",
+            "-"
+        ])
+        assert False
+    except RuntimeError as e:
+        assert '--token-auth requires a non-empty value' in str(e)
+
+def test_cli_empty_login_password_raises_error_even_with_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration([
+            "--url=http://localhost",
+            "--auth-config=%s" % str(auth_config),
+            "--login=",
+            "--password=",
+            "-"
+        ])
+        assert False
+    except RuntimeError as e:
+        assert '--login and --password must be non-empty' in str(e)
+
 def test_insecure_cli_auth_args_emit_deprecation_warning(caplog):
     argv = ["--url=http://localhost", "--token-auth=abcd", "-"]
     import_logs.Configuration(argv)

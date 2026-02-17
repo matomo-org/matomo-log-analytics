@@ -1088,7 +1088,15 @@ class Configuration:
         return date
 
     def _has_option(self, argv, name):
-        return any(arg == name or arg.startswith(name + '=') for arg in argv)
+        for arg in argv:
+            # '--' marks the end of options; any following values are positional args.
+            if arg == '--':
+                break
+
+            if arg == name or arg.startswith(name + '='):
+                return True
+
+        return False
 
     def _warn_if_insecure_auth_options_used(self, argv):
         insecure_options = []
@@ -1163,18 +1171,20 @@ class Configuration:
         cli_has_login = self._has_option(argv, '--login')
         cli_has_password = self._has_option(argv, '--password')
 
-        auth_config_credentials = None
-        if self.options.auth_config_file:
-            auth_config_credentials = self._load_auth_config(self.options.auth_config_file)
-
         # Explicit source precedence:
         # 1) CLI --token-auth
         # 2) CLI --login + --password
         # 3) --auth-config (token_auth, else login/password)
         # 4) --config fallback in _get_token_auth()
         if cli_has_token_auth:
+            token_auth = (self.options.matomo_token_auth or '').strip()
+            if not token_auth:
+                fatal_error("Option --token-auth requires a non-empty value.")
+
             if self.options.auth_config_file:
                 logging.info("Ignoring --auth-config credentials because --token-auth was provided.")
+
+            self.options.matomo_token_auth = token_auth
             self.options.login = None
             self.options.password = None
             return
@@ -1182,10 +1192,23 @@ class Configuration:
         if cli_has_login or cli_has_password:
             if not cli_has_login or not cli_has_password:
                 fatal_error("Options --login and --password must be used together.")
+
+            login = (self.options.login or '').strip()
+            password = (self.options.password or '').strip()
+            if not login or not password:
+                fatal_error("Options --login and --password must be non-empty when used together.")
+
             if self.options.auth_config_file:
                 logging.info("Ignoring --auth-config credentials because --login/--password were provided.")
+
+            self.options.login = login
+            self.options.password = password
             self.options.matomo_token_auth = None
             return
+
+        auth_config_credentials = None
+        if self.options.auth_config_file:
+            auth_config_credentials = self._load_auth_config(self.options.auth_config_file)
 
         self.options.login = None
         self.options.password = None
