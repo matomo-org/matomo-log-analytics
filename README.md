@@ -4,7 +4,7 @@ Import your server logs in Matomo with this powerful and easy to use tool.
 
 ## Requirements
 
-* Python 3.5, 3.6, 3.7, 3.8, 3.9, 3.10.
+* Python 3.
 * Matomo On-Premise >= 4.0.0 or Matomo Cloud. Doesn't work when [Matomo for WordPress](https://wordpress.org/plugins/matomo/) is used.
 
 Build status (main branch) ![PHPUnit](https://github.com/matomo-org/matomo-log-analytics/workflows/Tests/badge.svg?branch=4.x-dev)
@@ -53,8 +53,42 @@ The most simple way to import your logs is to run:
     ./import_logs.py --url=matomo.example.com /path/to/access.log
 
 You must specify your Matomo URL with the `--url` argument.
-The script will automatically read your config.inc.php file to get the authentication
-token and communicate with your Matomo install to import the lines. If your Matomo install is on a different server, use the `--token-auth=<SECRET>` parameter to specify your API token.
+The importer supports several authentication methods. The recommended method is `--auth-config`.
+If no authentication is explicitly provided, the script falls back to `--config` (Matomo `config.ini.php`)
+and tries to fetch a token using local Matomo files.
+
+### Secure authentication (recommended)
+
+If your Matomo install is on a different server, use `--auth-config` and store credentials in a file instead of passing them on the command line.
+
+Example `auth.cfg`:
+```
+[auth]
+token_auth = your_token_here
+# OR
+# login = your_login_here
+# password = your_password_here
+```
+
+Then run:
+```
+./import_logs.py --url=matomo.example.com --auth-config=/path/to/auth.cfg /path/to/access.log
+```
+
+Security notes:
+* Restrict the auth config file permissions (recommended: `chmod 600 /path/to/auth.cfg`).
+* Passing secrets via CLI arguments (for example `--token-auth`, `--login`, `--password`) is deprecated and not recommended, since local users can read process arguments with tools like `ps` or `htop`.
+
+Authentication methods:
+* `--auth-config` (recommended): load credentials from `[auth]` in a file (`token_auth`, or `login` + `password`).
+* `--token-auth`, `--login`, `--password` (deprecated/insecure via CLI): still supported for compatibility. `--login` and `--password` must be provided together; they request an app-specific token through the Matomo API.
+* `--config` fallback: intended for local Matomo installs, because it uses Matomo's local `misc/cron/updatetoken.php` script and a local `config.ini.php`.
+
+Authentication precedence (highest to lowest):
+* CLI `--token-auth`
+* CLI `--login` + `--password`
+* `--auth-config` (`token_auth`, or `login` + `password`)
+* `--config` fallback
 
 The default mode will try to mimic the Javascript tracker as much as possible,
 and will not track bots, static files, or error requests.
@@ -66,9 +100,8 @@ If you wish to track all requests the following command would be used:
 
 ### Format Specific Details
 
-* If you are importing Netscaler log files, make sure to specify the `--iis-time-taken-secs` option. Netscaler stores
-  the time-taken field in seconds while most other formats use milliseconds. Using this option will ensure that the
-  log importer interprets the field correctly.
+* Netscaler logs commonly store W3C `time-taken` in seconds. The importer interprets W3C `time-taken` as seconds by default,
+  so no extra option is needed for that case. Use `--w3c-time-taken-millisecs` only if your `time-taken` values are milliseconds.
 
 * Some log formats can't be detected automatically as they would conflict with other formats. In order to import those logfiles make sure to specify the `--log-format-name` option.
   Those log formats are: OVH (ovh), Incapsula W3C (incapsula_w3c)
@@ -89,7 +122,7 @@ Your logs should be automatically rotated and stored on your webserver, for inst
 month and day).
 You can then import your logs automatically each day (at 0:01). Setup a cron job with the command:
 
-    1 0 * * * /path/to/matomo/misc/log-analytics/import-logs.py -u matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
+    1 0 * * * /path/to/matomo/misc/log-analytics/import_logs.py --url=matomo.example.com `date --date=yesterday +/var/log/apache/access-\%Y-\%m-\%d.log`
 
 ## Using Basic access authentication
 
@@ -267,12 +300,12 @@ if $syslogfacility-text == 'local0' then ^/usr/local/matomo/matomo.sh;matomo
 
 ###### matomo.sh, rsyslog version
 
-`/usr/local/matomo/matomo.sh`, won't work without `--token-auth` parameter:
+`/usr/local/matomo/matomo.sh` example using `--auth-config`:
 ```
 #!/bin/sh
 
 echo "${@}" | /path/to/misc/log-analytics/import_logs.py \
- --url=https://localhost/matomo/ --token-auth=<SECRET> \
+ --url=https://localhost/matomo/ --auth-config=/path/to/auth.cfg \
  --enable-http-errors --enable-http-redirects --enable-static --enable-bots \
  --idsite=1 --recorders=4 --log-format-name=nginx_json -
 ```

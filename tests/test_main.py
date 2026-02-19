@@ -1246,6 +1246,258 @@ def test_glob_filenames():
 
     assert config.filenames == ['logs/common.log', 'logs/common_complete.log', 'logs/common_encoding_big5.log', 'logs/common_vhost.log', 'logs/elb.log']
 
+def test_auth_config_sets_token_auth(tmp_path):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = test_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    config = import_logs.Configuration(argv)
+
+    assert config.options.matomo_token_auth == 'test_token'
+
+def test_auth_config_login_password_used_for_token_fetch(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\nlogin = superuser\npassword = secret\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    config = import_logs.Configuration(argv)
+
+    class DummyMatomo:
+        def call_api(self, method, **kwargs):
+            assert method == 'UsersManager.createAppSpecificTokenAuth'
+            assert kwargs['userLogin'] == 'superuser'
+            assert kwargs['passwordConfirmation'] == 'secret'
+            return {'value': 'generated_token'}
+
+    monkeypatch.setattr(import_logs, 'matomo', DummyMatomo(), raising=False)
+
+    assert config._get_token_auth() == 'generated_token'
+
+def test_cli_login_password_take_precedence_over_auth_config_token(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = [
+        "--url=http://localhost",
+        "--auth-config=%s" % str(auth_config),
+        "--login=cli_user",
+        "--password=cli_secret",
+        "-"
+    ]
+    config = import_logs.Configuration(argv)
+
+    class DummyMatomo:
+        def call_api(self, method, **kwargs):
+            assert method == 'UsersManager.createAppSpecificTokenAuth'
+            assert kwargs['userLogin'] == 'cli_user'
+            assert kwargs['passwordConfirmation'] == 'cli_secret'
+            return {'value': 'generated_token'}
+
+    monkeypatch.setattr(import_logs, 'matomo', DummyMatomo(), raising=False)
+
+    assert config.options.matomo_token_auth is None
+    assert config._get_token_auth() == 'generated_token'
+
+def test_cli_token_auth_takes_precedence_over_auth_config(tmp_path):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    argv = [
+        "--url=http://localhost",
+        "--auth-config=%s" % str(auth_config),
+        "--token-auth=cli_token",
+        "-"
+    ]
+    config = import_logs.Configuration(argv)
+
+    assert config.options.matomo_token_auth == 'cli_token'
+    assert config.options.login is None
+    assert config.options.password is None
+
+def test_cli_token_auth_ignores_missing_auth_config(monkeypatch):
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--auth-config=/tmp/definitely_missing_auth_config.cfg",
+        "--token-auth=cli_token",
+        "-"
+    ])
+
+    assert config.options.matomo_token_auth == 'cli_token'
+
+def test_double_dash_stops_auth_option_detection(monkeypatch, caplog):
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--",
+        "-",
+        "--token-auth=fake.log",
+    ])
+
+    messages = [record.getMessage() for record in caplog.records]
+
+    assert config.options.matomo_token_auth is None
+    assert not any('DEPRECATION WARNING' in message for message in messages)
+
+def test_cli_login_password_ignores_invalid_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'invalid_auth.cfg'
+    auth_config.write_text('[not_auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    config = import_logs.Configuration([
+        "--url=http://localhost",
+        "--auth-config=%s" % str(auth_config),
+        "--login=cli_user",
+        "--password=cli_secret",
+        "-"
+    ])
+
+    assert config.options.login == 'cli_user'
+    assert config.options.password == 'cli_secret'
+    assert config.options.matomo_token_auth is None
+
+def test_cli_empty_token_auth_raises_error_even_with_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration([
+            "--url=http://localhost",
+            "--auth-config=%s" % str(auth_config),
+            "--token-auth=",
+            "-"
+        ])
+        assert False
+    except RuntimeError as e:
+        assert '--token-auth requires a non-empty value' in str(e)
+
+def test_cli_empty_login_password_raises_error_even_with_auth_config(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = file_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration([
+            "--url=http://localhost",
+            "--auth-config=%s" % str(auth_config),
+            "--login=",
+            "--password=",
+            "-"
+        ])
+        assert False
+    except RuntimeError as e:
+        assert '--login and --password must be non-empty' in str(e)
+
+def test_insecure_cli_auth_args_emit_deprecation_warning(caplog):
+    argv = ["--url=http://localhost", "--token-auth=abcd", "-"]
+    import_logs.Configuration(argv)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any('DEPRECATION WARNING' in message for message in messages)
+    assert any('--token-auth' in message for message in messages)
+
+def test_auth_config_permissions_warning(tmp_path, caplog):
+    if os.name == 'nt':
+        return
+
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\ntoken_auth = test_token\n')
+    os.chmod(str(auth_config), 0o644)
+
+    argv = ["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"]
+    import_logs.Configuration(argv)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any('overly permissive permissions' in message for message in messages)
+
+def test_auth_config_missing_auth_section_raises_error(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[not_auth]\ntoken_auth = test_token\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration(["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"])
+        assert False
+    except RuntimeError as e:
+        assert "missing the [auth] section" in str(e)
+
+def test_auth_config_partial_login_password_raises_error(tmp_path, monkeypatch):
+    auth_config = tmp_path / 'auth.cfg'
+    auth_config.write_text('[auth]\nlogin = superuser\n')
+    os.chmod(str(auth_config), 0o600)
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration(["--url=http://localhost", "--auth-config=%s" % str(auth_config), "-"])
+        assert False
+    except RuntimeError as e:
+        assert 'must set both login and password' in str(e)
+
+def test_cli_partial_login_password_raises_error(monkeypatch):
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        import_logs.Configuration(["--url=http://localhost", "--login=superuser", "-"])
+        assert False
+    except RuntimeError as e:
+        assert 'must be used together' in str(e)
+
+def test_missing_config_file_error_mentions_auth_config(monkeypatch):
+    config = import_logs.Configuration(["--url=http://localhost", "--config=/tmp/definitely_missing_config_file.ini.php", "-"])
+
+    def fake_fatal_error(message, filename=None, lineno=None):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(import_logs, 'fatal_error', fake_fatal_error)
+
+    try:
+        config._get_token_auth()
+        assert False
+    except RuntimeError as e:
+        message = str(e)
+        assert 'No authentication was provided' in message
+        assert '--auth-config' in message
+
 # UrlHelper tests
 def test_urlhelper_convert_array_args():
     def _test(input, expected):

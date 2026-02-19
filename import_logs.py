@@ -37,6 +37,7 @@ import logging
 import argparse
 import os
 import os.path
+import stat
 import queue
 import re
 import ssl
@@ -776,22 +777,30 @@ class Configuration:
         parser.add_argument(
             '--config', dest='config_file', default=default_config,
             help=(
-                "This is only used when --login and --password is not used. "
+                "This is only used when --auth-config, --token-auth, or --login/--password are not used. "
                 "Matomo will read the configuration file (default: %(default)s) to "
                 "fetch the Super User token_auth from the config file. "
             )
         )
         parser.add_argument(
+            '--auth-config', dest='auth_config_file', default=None,
+            help=(
+                "Path to an authentication config file. "
+                "Expected format: [auth] with token_auth=... OR login=... and password=.... "
+                "This is the recommended way to provide secrets."
+            )
+        )
+        parser.add_argument(
             '--login', dest='login',
-            help="You can manually specify the Matomo Super User login"
+            help="Deprecated and insecure: manually specify the Matomo Super User login via CLI."
         )
         parser.add_argument(
             '--password', dest='password',
-            help="You can manually specify the Matomo Super User password"
+            help="Deprecated and insecure: manually specify the Matomo Super User password via CLI."
         )
         parser.add_argument(
             '--token-auth', dest='matomo_token_auth',
-            help="Matomo user token_auth, the token_auth is found in Matomo > Settings > API. "
+            help="Deprecated and insecure via CLI. Matomo user token_auth, the token_auth is found in Matomo > Settings > API. "
                  "You must use a token_auth that has at least 'admin' or 'super user' permission. "
                  "If you use a token_auth for a non admin user, your users' IP addresses will not be tracked properly. "
         )
@@ -1078,6 +1087,143 @@ class Configuration:
 
         return date
 
+    def _has_option(self, argv, name):
+        for arg in argv:
+            # '--' marks the end of options; any following values are positional args.
+            if arg == '--':
+                break
+
+            if arg == name or arg.startswith(name + '='):
+                return True
+
+        return False
+
+    def _warn_if_insecure_auth_options_used(self, argv):
+        insecure_options = []
+        if self._has_option(argv, '--token-auth'):
+            insecure_options.append('--token-auth')
+        if self._has_option(argv, '--login'):
+            insecure_options.append('--login')
+        if self._has_option(argv, '--password'):
+            insecure_options.append('--password')
+
+        if insecure_options:
+            logging.warning(
+                "DEPRECATION WARNING: passing authentication secrets via CLI options (%s) is insecure because "
+                "other users on the same machine can read process arguments. Use --auth-config instead.",
+                ', '.join(insecure_options),
+            )
+
+    def _warn_if_auth_config_permissions_are_too_open(self, filename):
+        if os.name == 'nt':
+            return
+
+        try:
+            mode = stat.S_IMODE(os.stat(filename).st_mode)
+        except OSError as e:
+            fatal_error("Could not stat auth config file '%s': %s" % (filename, e))
+
+        if mode & 0o077:
+            logging.warning(
+                "Authentication config file '%s' has overly permissive permissions (%03o). "
+                "Restrict it to 600.",
+                filename,
+                mode,
+            )
+
+    def _load_auth_config(self, filename):
+        if not os.path.isfile(filename):
+            fatal_error("Authentication config file '%s' does not exist or is not a file." % filename)
+
+        self._warn_if_auth_config_permissions_are_too_open(filename)
+
+        auth_config = configparser.RawConfigParser(strict=False)
+        success = len(auth_config.read(filename)) > 0
+        if not success:
+            fatal_error("Authentication config file '%s' could not be read." % filename)
+
+        if not auth_config.has_section('auth'):
+            fatal_error("Authentication config file '%s' is missing the [auth] section." % filename)
+
+        token_auth = auth_config.get('auth', 'token_auth', fallback='').strip()
+        login = auth_config.get('auth', 'login', fallback='').strip()
+        password = auth_config.get('auth', 'password', fallback='').strip()
+
+        if token_auth:
+            return {'token_auth': token_auth, 'login': None, 'password': None}
+
+        if login or password:
+            if not login or not password:
+                fatal_error(
+                    "Authentication config file '%s' must set both login and password when token_auth is not used."
+                    % filename
+                )
+
+            return {'token_auth': None, 'login': login, 'password': password}
+
+        fatal_error(
+            "Authentication config file '%s' does not contain token_auth or login/password in the [auth] section."
+            % filename
+        )
+
+    def _apply_auth_precedence(self, argv):
+        cli_has_token_auth = self._has_option(argv, '--token-auth')
+        cli_has_login = self._has_option(argv, '--login')
+        cli_has_password = self._has_option(argv, '--password')
+
+        # Explicit source precedence:
+        # 1) CLI --token-auth
+        # 2) CLI --login + --password
+        # 3) --auth-config (token_auth, else login/password)
+        # 4) --config fallback in _get_token_auth()
+        if cli_has_token_auth:
+            token_auth = (self.options.matomo_token_auth or '').strip()
+            if not token_auth:
+                fatal_error("Option --token-auth requires a non-empty value.")
+
+            if self.options.auth_config_file:
+                logging.info("Ignoring --auth-config credentials because --token-auth was provided.")
+
+            self.options.matomo_token_auth = token_auth
+            self.options.login = None
+            self.options.password = None
+            return
+
+        if cli_has_login or cli_has_password:
+            if not cli_has_login or not cli_has_password:
+                fatal_error("Options --login and --password must be used together.")
+
+            login = (self.options.login or '').strip()
+            password = (self.options.password or '').strip()
+            if not login or not password:
+                fatal_error("Options --login and --password must be non-empty when used together.")
+
+            if self.options.auth_config_file:
+                logging.info("Ignoring --auth-config credentials because --login/--password were provided.")
+
+            self.options.login = login
+            self.options.password = password
+            self.options.matomo_token_auth = None
+            return
+
+        auth_config_credentials = None
+        if self.options.auth_config_file:
+            auth_config_credentials = self._load_auth_config(self.options.auth_config_file)
+
+        self.options.login = None
+        self.options.password = None
+
+        if not auth_config_credentials:
+            return
+
+        if auth_config_credentials['token_auth']:
+            self.options.matomo_token_auth = auth_config_credentials['token_auth']
+            return
+
+        self.options.matomo_token_auth = None
+        self.options.login = auth_config_credentials['login']
+        self.options.password = auth_config_credentials['password']
+
     def _parse_args(self, option_parser, argv = None):
         """
         Parse the command line args and create self.options and self.filenames.
@@ -1104,6 +1250,9 @@ class Configuration:
             format='%(asctime)s: [%(levelname)s] %(message)s',
             level=logging.DEBUG if self.options.debug >= 1 else logging.INFO,
         )
+
+        self._warn_if_insecure_auth_options_used(argv)
+        self._apply_auth_precedence(argv)
 
         self.options.excluded_useragents = set([s.lower() for s in self.options.excluded_useragents])
 
@@ -1225,7 +1374,9 @@ class Configuration:
             success = len(config_file.read(self.options.config_file)) > 0
             if not success:
                 fatal_error(
-                    "the configuration file" + self.options.config_file + " could not be read. Please check permission. This file must be readable by the user running this script to get the authentication token"
+                    "No authentication was provided and the configuration file '%s' could not be read "
+                    "(missing or unreadable). If your Matomo instance is remote/external, use --auth-config "
+                    "to provide credentials securely." % self.options.config_file
                 )
 
             updatetokenfile = os.path.abspath(
@@ -1244,9 +1395,9 @@ class Configuration:
                     if processWin.returncode == 0:
                         phpBinary = stdout.strip()
                     else:
-                        fatal_error("We couldn't detect PHP. It might help to add your php.exe to the path or alternatively run the importer using the --login and --password option")
+                        fatal_error("We couldn't detect PHP. It might help to add your php.exe to the path or use --auth-config.")
                 except:
-                    fatal_error("We couldn't detect PHP. You can run the importer using the --login and --password option to fix this issue")
+                    fatal_error("We couldn't detect PHP. You can run the importer using --auth-config to fix this issue")
 
             command = [phpBinary, updatetokenfile]
             if self.options.enable_testmode:
@@ -1263,7 +1414,7 @@ class Configuration:
             [stdout, stderr] = process.communicate()
             stdout, stderr = stdout.decode(), stderr.decode()
             if process.returncode != 0:
-                fatal_error("`" + command + "` failed with error: " + stderr + ".\nReponse code was: " + str(process.returncode) + ". You can alternatively run the importer using the --login and --password option")
+                fatal_error("`" + command + "` failed with error: " + stderr + ".\nReponse code was: " + str(process.returncode) + ". You can alternatively run the importer using --auth-config")
 
             filename = stdout
             credentials = open(filename, 'r').readline()
