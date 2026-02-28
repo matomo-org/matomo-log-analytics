@@ -1883,7 +1883,7 @@ class MatomoHttpUrllib(MatomoHttpBase):
         try:
             return json.loads(res)
         except ValueError:
-            raise urllib.error.URLError('Matomo returned an invalid response: ' + res.decode("utf-8") )
+            raise urllib.error.URLError('Matomo returned an invalid response: ' + res )
 
     def _call_wrapper(self, func, expected_response, on_failure, *args, **kwargs):
         """
