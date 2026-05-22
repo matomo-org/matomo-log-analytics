@@ -2338,10 +2338,14 @@ class Recorder:
 
         # handle bot tracking
         if config.options.enable_bots:
-            try:
-                dimension_id = int(config.options.enable_bots)
-            except (TypeError, ValueError):
+            if config.options.enable_bots is True:
                 dimension_id = None
+            else:
+                try:
+                    dimension_id = int(config.options.enable_bots)
+                except (TypeError, ValueError):
+                    dimension_id = None
+
             if dimension_id is not None:
                 dim_key = 'dimension%d' % dimension_id
                 if hit.is_robot:
