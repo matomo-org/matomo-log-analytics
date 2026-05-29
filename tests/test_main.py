@@ -1591,3 +1591,58 @@ def test_bz2_parsing():
     assert hits[0]['status'] == '200'
     assert hits[0]['length'] == 444
     assert hits[0]['userid'] == 'theboss'
+    
+    
+def test_get_bot_name_for_custom_dimension():
+    """Test bot name lookup from user agent string."""
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; GPTBot/1.0)') == 'GPTBot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; ClaudeBot/1.0)') == 'ClaudeBot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; Googlebot/2.1)') == 'Googlebot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; bingbot/2.0)') == 'Bingbot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (Windows NT 10.0) Chrome/120.0') == 'Other Bot'
+
+
+def test_enable_bots_custom_variable_fallback():
+    """--enable-bots without value stores bot info in Custom Variable (backward compat)."""
+    file_ = 'logs/ncsa_extended.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.enable_bots = True  # kein Dimension-ID
+    import_logs.config.options.enable_http_errors = False
+    import_logs.config.options.enable_http_redirects = False
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.download_extensions = 'doc,pdf'
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    for hit in Recorder.recorders:
+        if hit.is_robot:
+            assert 'dimension1' not in hit.args
+            break
+
+
+def test_enable_bots_custom_dimension():
+    """--enable-bots=1 stores classified bot name in Custom Dimension 1."""
+    file_ = 'logs/ncsa_extended.log'
+
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.enable_bots = '1'  # Dimension-ID als String
+    import_logs.config.options.enable_http_errors = False
+    import_logs.config.options.enable_http_redirects = False
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.download_extensions = 'doc,pdf'
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse(file_)
+
+    for hit in Recorder.recorders:
+        assert 'dimension1' in hit.args
+        assert hit.args['dimension1'] in (
+            [name for name, _ in import_logs.BOT_CUSTOM_DIMENSION_NAMES] + ['Other Bot', 'Not a Bot']
+        )
+        break
