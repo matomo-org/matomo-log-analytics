@@ -1887,7 +1887,7 @@ class MatomoHttpUrllib(MatomoHttpBase):
 
     def _call_wrapper(self, func, expected_response, on_failure, *args, **kwargs):
         """
-        Try to make requests to Matomo at most MATOMO_FAILURE_MAX_RETRY times.
+        Try to make requests to Matomo at most MATOMO_DEFAULT_MAX_ATTEMPTS times.
         """
         errors = 0
         while True:
