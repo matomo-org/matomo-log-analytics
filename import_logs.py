@@ -957,13 +957,16 @@ class Configuration:
         )
         parser.add_argument(
             '--enable-bots', dest='enable_bots',
-            nargs='?', const=True, default=None,
+            action='store_true', default=False,
+            help="Track bots. All bot visits will have a Custom Variable set with name='Bot' and value='$Bot_user_agent_here$'"
+        )
+        parser.add_argument(
+            '--bot-custom-dimension', dest='bot_custom_dimension',
+            type=int, default=None,
             metavar='DIMENSION_ID',
-            help="Track bots. When used without a value (--enable-bots), bot visits will have a Custom Variable "
-                 "set with name='Bot' and value='$Bot_user_agent_here$' (requires the CustomVariables plugin). "
-                 "When used with a Custom Dimension ID (--enable-bots=1), the bot name is stored in that dimension "
-                 "instead, which is the recommended approach for Matomo 5+ where Custom Variables are deprecated. "
-                 "Non-bot visits receive 'Not a Bot' in the dimension."
+            help="Store the bot name in the given Custom Dimension ID instead of a Custom Variable "
+                 "(recommended for Matomo 5+ where Custom Variables are deprecated). "
+                 "Requires --enable-bots. Non-bot visits receive 'Not a Bot' in the dimension."
         )
         parser.add_argument(
             '--enable-http-errors', dest='enable_http_errors',
@@ -2338,16 +2341,8 @@ class Recorder:
 
         # handle bot tracking
         if config.options.enable_bots:
-            if config.options.enable_bots is True:
-                dimension_id = None
-            else:
-                try:
-                    dimension_id = int(config.options.enable_bots)
-                except (TypeError, ValueError):
-                    dimension_id = None
-
-            if dimension_id is not None:
-                dim_key = 'dimension%d' % dimension_id
+            if config.options.bot_custom_dimension is not None:
+                dim_key = 'dimension%d' % config.options.bot_custom_dimension
                 if hit.is_robot:
                     hit.args[dim_key] = _get_bot_name_for_custom_dimension(hit.user_agent)
                 else:
@@ -2386,7 +2381,7 @@ class Recorder:
         if hit.is_download:
             args['download'] = args['url']
 
-        if config.options.enable_bots:
+        if config.options.enable_bots or config.options.bot_custom_dimension is not None:
             args['bots'] = '1'
 
         if hit.is_error or hit.is_redirect:
@@ -2617,7 +2612,7 @@ class Parser:
         user_agent = hit.user_agent.lower()
         for s in itertools.chain(EXCLUDED_USER_AGENTS, config.options.excluded_useragents):
             if s in user_agent:
-                if config.options.enable_bots:
+                if config.options.enable_bots or config.options.bot_custom_dimension is not None:
                     hit.is_robot = True
                     return True
                 else:
