@@ -31,6 +31,7 @@ import gzip
 import hashlib
 import http.client
 import inspect
+import io
 import itertools
 import json
 import logging
@@ -1878,7 +1879,21 @@ class MatomoHttpUrllib(MatomoHttpBase):
 #        logging.debug('%s' % final_args)
 #        logging.debug('%s' % url)
 
-        res = self._call('/', final_args, url=url)
+        try:
+            res = self._call('/', final_args, url=url)
+        except urllib.error.HTTPError as e:
+            # Matomo answers some API errors with a 4xx status; retrying them won't help
+            if 400 <= e.code < 500 and e.headers.get_content_type() == 'application/json':
+                body = e.read()
+                try:
+                    response = json.loads(body.decode('utf-8'))
+                except ValueError:
+                    response = None
+                if isinstance(response, dict) and response.get('result') == 'error':
+                    raise MatomoHttpBase.Error(response.get('message'), e.code)
+                # the body was consumed above, keep it for the retry handling
+                raise urllib.error.HTTPError(e.url, e.code, e.msg, e.headers, io.BytesIO(body)) from e
+            raise
 
         try:
             return json.loads(res)
@@ -1956,9 +1971,12 @@ class StaticResolver:
     def __init__(self, site_id):
         self.site_id = site_id
         # Go get the main URL
-        site = matomo.call_api(
-            'SitesManager.getSiteFromId', idSite=self.site_id
-        )
+        try:
+            site = matomo.call_api(
+                'SitesManager.getSiteFromId', idSite=self.site_id
+            )
+        except MatomoHttpBase.Error as e:
+            fatal_error("cannot get the main URL of this site: %s" % e)
         if site.get('result') == 'error':
             fatal_error(
                 "cannot get the main URL of this site: %s" % site.get('message')
@@ -1983,7 +2001,10 @@ class DynamicResolver:
         self._cache = {}
         if config.options.replay_tracking:
             # get existing sites
-            self._cache['sites'] = matomo.call_api('SitesManager.getAllSites')
+            try:
+                self._cache['sites'] = matomo.call_api('SitesManager.getAllSites')
+            except MatomoHttpBase.Error as e:
+                fatal_error("cannot get the existing sites: %s" % e)
 
     def _get_site_id_from_hit_host(self, hit):
         return matomo.call_api(
