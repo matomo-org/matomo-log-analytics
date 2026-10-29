@@ -1650,6 +1650,26 @@ def test_call_api_still_retries_other_http_errors():
 
     assert len(calls) == ApiOptions.max_attempts
 
+def test_call_api_keeps_the_body_of_a_json_4xx_that_is_no_api_error():
+    import_logs.config = ApiConfig()
+    matomo = import_logs.MatomoHttpUrllib()
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        raise _http_error(403, '{"blocked":true}', 'application/json')
+
+    matomo._call = call
+
+    try:
+        matomo.call_api('SitesManager.getSiteFromId', idSite=99)
+        assert False, 'expected an error'
+    except import_logs.MatomoHttpBase.Error as e:
+        assert e.code == 403
+        assert '{"blocked":true}' in str(e)
+
+    assert len(calls) == ApiOptions.max_attempts
+
 def test_static_resolver_reports_api_error_answered_with_4xx():
     class FakeMatomo(object):
         def call_api(self, method, **kwargs):
