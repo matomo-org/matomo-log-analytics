@@ -1878,7 +1878,18 @@ class MatomoHttpUrllib(MatomoHttpBase):
 #        logging.debug('%s' % final_args)
 #        logging.debug('%s' % url)
 
-        res = self._call('/', final_args, url=url)
+        try:
+            res = self._call('/', final_args, url=url)
+        except urllib.error.HTTPError as e:
+            # Matomo answers some API errors with a 4xx status; retrying them won't help
+            if 400 <= e.code < 500 and e.headers.get_content_type() == 'application/json':
+                try:
+                    response = json.loads(e.read().decode('utf-8'))
+                except ValueError:
+                    response = None
+                if isinstance(response, dict) and response.get('result') == 'error':
+                    raise MatomoHttpBase.Error(response.get('message'), e.code)
+            raise
 
         try:
             return json.loads(res)
@@ -1956,9 +1967,12 @@ class StaticResolver:
     def __init__(self, site_id):
         self.site_id = site_id
         # Go get the main URL
-        site = matomo.call_api(
-            'SitesManager.getSiteFromId', idSite=self.site_id
-        )
+        try:
+            site = matomo.call_api(
+                'SitesManager.getSiteFromId', idSite=self.site_id
+            )
+        except MatomoHttpBase.Error as e:
+            fatal_error("cannot get the main URL of this site: %s" % e)
         if site.get('result') == 'error':
             fatal_error(
                 "cannot get the main URL of this site: %s" % site.get('message')

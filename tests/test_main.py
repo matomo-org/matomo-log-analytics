@@ -1591,3 +1591,85 @@ def test_bz2_parsing():
     assert hits[0]['status'] == '200'
     assert hits[0]['length'] == 444
     assert hits[0]['userid'] == 'theboss'
+
+class ApiOptions(object):
+    """Mock options for API calls."""
+    matomo_token_auth = 'token'
+    matomo_api_url = 'http://example.com'
+    delay_after_failure = 0
+    max_attempts = 3
+
+class ApiConfig(object):
+    options = ApiOptions()
+
+def _http_error(code, body, content_type):
+    import email.message
+    import io
+    import urllib.error
+
+    headers = email.message.Message()
+    headers['Content-Type'] = content_type
+    return urllib.error.HTTPError('http://example.com/', code, 'Error', headers, io.BytesIO(body.encode('utf-8')))
+
+def test_call_api_raises_api_error_answered_with_4xx_without_retrying():
+    import_logs.config = ApiConfig()
+    matomo = import_logs.MatomoHttpUrllib()
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        raise _http_error(400, '{"result":"error","message":"An unexpected website was found"}', 'application/json')
+
+    matomo._call = call
+
+    try:
+        matomo.call_api('SitesManager.getSiteFromId', idSite=99)
+        assert False, 'expected an error'
+    except import_logs.MatomoHttpBase.Error as e:
+        assert str(e) == 'An unexpected website was found'
+        assert e.code == 400
+
+    assert len(calls) == 1
+
+def test_call_api_still_retries_other_http_errors():
+    import_logs.config = ApiConfig()
+    matomo = import_logs.MatomoHttpUrllib()
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        raise _http_error(404, '<html>Not Found</html>', 'text/html')
+
+    matomo._call = call
+
+    try:
+        matomo.call_api('SitesManager.getSiteFromId', idSite=99)
+        assert False, 'expected an error'
+    except import_logs.MatomoHttpBase.Error as e:
+        assert e.code == 404
+
+    assert len(calls) == ApiOptions.max_attempts
+
+def test_static_resolver_reports_api_error_answered_with_4xx():
+    class FakeMatomo(object):
+        def call_api(self, method, **kwargs):
+            raise import_logs.MatomoHttpBase.Error('An unexpected website was found', 400)
+
+    class FatalError(Exception):
+        pass
+
+    def fatal_error(error, filename=None, lineno=None):
+        raise FatalError(error)
+
+    original_matomo = getattr(import_logs, 'matomo', None)
+    original_fatal_error = import_logs.fatal_error
+    import_logs.matomo = FakeMatomo()
+    import_logs.fatal_error = fatal_error
+    try:
+        import_logs.StaticResolver(99)
+        assert False, 'expected a fatal error'
+    except FatalError as e:
+        assert str(e) == 'cannot get the main URL of this site: An unexpected website was found'
+    finally:
+        import_logs.matomo = original_matomo
+        import_logs.fatal_error = original_fatal_error
