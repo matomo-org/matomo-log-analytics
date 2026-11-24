@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.8', '3.9', '3.10', '3.13' ]
-        operating-system: [ 'ubuntu-latest' ]
+        operating-system: [ 'ubuntu-24.04' ]
     name: Tests (Python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
