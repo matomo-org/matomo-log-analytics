@@ -1,0 +1,7 @@
+www.example.com 1.2.3.4 - - [10/Feb/2012:16:41:07 -0500] "GET / HTTP/1.1" 200 368 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11"
+www.example.com 1.2.3.5 - - [10/Feb/2012:16:41:08 -0500] "GET /page HTTP/1.1" 200 512 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot"
+www.example.com 1.2.3.6 - - [10/Feb/2012:16:41:09 -0500] "GET /gone HTTP/1.1" 404 0 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)"
+www.example.com 1.2.3.7 - - [10/Feb/2012:16:41:10 -0500] "GET /old HTTP/1.1" 301 0 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user"
+www.example.com 1.2.3.8 - - [10/Feb/2012:16:41:11 -0500] "GET /doc.pdf HTTP/1.1" 200 2048 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots"
+www.example.com 1.2.3.9 - - [10/Feb/2012:16:41:12 -0500] "GET /logo.png HTTP/1.1" 200 100 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot"
+www.example.com 1.2.3.10 - - [10/Feb/2012:16:41:13 -0500] "GET / HTTP/1.1" 200 368 "-" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
