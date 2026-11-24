@@ -214,7 +214,7 @@ It sends these requests as bot requests (`recMode=1`) together with their HTTP s
 They never create visits, so your visitor numbers stay the same. For the same reason they are imported even when they returned an HTTP error or redirect, and even without `--enable-bots`.
 Requests for static files are skipped unless you use `--enable-static`, and downloads follow `--download-extensions` as usual.
 
-The script stops with an error if your Matomo is older than 5.7, because older versions would record these requests as visits.
+The script stops with an error if your Matomo is older than 5.13 or the BotTracking plugin is not activated. Older versions record these requests as visits or do not handle all of them correctly, and without the plugin Matomo discards them.
 
 Run the import for a log file only once: importing it twice counts the AI chatbot requests twice.
 

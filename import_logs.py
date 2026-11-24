@@ -866,7 +866,8 @@ class Configuration:
             '--enable-ai-chatbots', dest='enable_ai_chatbots',
             action='store_true', default=False,
             help="Track requests made by AI chatbots on behalf of a person (ChatGPT-User, Claude-User, "
-                 "Perplexity-User, ...) in Matomo's AI chatbot reports. Requires Matomo 5.7 or later. "
+                 "Perplexity-User, ...) in Matomo's AI chatbot reports. Requires Matomo 5.13 or later "
+                 "with the BotTracking plugin activated. "
                  "These requests are sent as bot requests (recMode=1) including their HTTP status code, "
                  "so they never create visits, whatever --enable-bots, --enable-http-errors and "
                  "--enable-http-redirects are set to"
@@ -1580,8 +1581,7 @@ The following lines were not tracked by Matomo, either due to a malformed tracke
 
     %(count_lines_recorded)d requests imported successfully
     %(count_lines_downloads)d requests were downloads
-    %(count_lines_ai_chatbots)d requests were made by AI chatbots (recorded in the AI chatbot reports, not as visits)
-    %(total_lines_ignored)d requests ignored:
+%(ai_chatbots_summary)s    %(total_lines_ignored)d requests ignored:
         %(count_lines_skipped_http_errors)d HTTP errors
         %(count_lines_skipped_http_redirects)d HTTP redirects
         %(count_lines_invalid)d invalid log lines
@@ -1618,7 +1618,10 @@ Processing your log data
 
     'count_lines_recorded': self.count_lines_recorded.value,
     'count_lines_downloads': self.count_lines_downloads.value,
-    'count_lines_ai_chatbots': self.count_lines_ai_chatbots.value,
+    'ai_chatbots_summary': (
+        '    %d requests were sent as AI chatbot requests (not as visits)\n' % self.count_lines_ai_chatbots.value
+        if config.options.enable_ai_chatbots else ''
+    ),
     'total_lines_ignored': sum([
             self.count_lines_invalid.value,
             self.count_lines_filtered.value,
@@ -2334,7 +2337,6 @@ class Recorder:
             args['recMode'] = '1'
             args['http_status'] = hit.status
             args['source'] = 'log-analytics'
-            stats.count_lines_ai_chatbots.increment()
 
         # convert custom variable args to JSON
         if 'cvar' in args and not isinstance(args['cvar'], str):
@@ -2544,7 +2546,8 @@ class Parser:
             excluded = itertools.chain(EXCLUDED_USER_AGENTS, excluded)
         for s in excluded:
             if s in user_agent:
-                if config.options.enable_bots:
+                # --enable-bots would make a visit, so excluded AI chatbots are always skipped.
+                if config.options.enable_bots and not hit.is_ai_chatbot:
                     hit.is_robot = True
                     return True
                 else:
@@ -2973,6 +2976,9 @@ class Parser:
                 filtered_line(line, reason)
                 continue
 
+            if hit.is_ai_chatbot:
+                stats.count_lines_ai_chatbots.increment()
+
             hits.append(hit)
 
             if len(hits) >= config.options.recorder_max_payload_size * len(Recorder.recorders):
@@ -3038,12 +3044,24 @@ def main():
     stats.print_summary()
 
 def check_ai_chatbot_support():
-    # Matomo before 5.7 ignores recMode and would turn AI chatbot requests,
-    # including HTTP errors and redirects, into visits.
-    version = matomo.call_api('API.getMatomoVersion').get('value', '')
-    match = re.match(r'(\d+)\.(\d+)', version)
-    if not match or tuple(map(int, match.groups())) < (5, 7):
-        fatal_error('--enable-ai-chatbots requires Matomo 5.7 or later, found version "%s".' % version)
+    # Matomo before 5.7 ignores recMode and would turn AI chatbot requests into visits.
+    # Before 5.13 it does not know all of AI_CHATBOT_USER_AGENTS and keeps excluded
+    # query parameters in the reports. Without the BotTracking plugin it discards
+    # all recMode=1 requests.
+    try:
+        version = matomo.call_api('API.getMatomoVersion')
+        plugin = matomo.call_api('API.isPluginActivated', pluginName='BotTracking')
+    except MatomoHttpBase.Error as e:
+        fatal_error('cannot check if Matomo supports --enable-ai-chatbots: %s' % e)
+    for result in (version, plugin):
+        if result.get('result') == 'error':
+            fatal_error('cannot check if Matomo supports --enable-ai-chatbots: %s' % result.get('message'))
+
+    match = re.match(r'(\d+)\.(\d+)', version.get('value', ''))
+    if not match or tuple(map(int, match.groups())) < (5, 13):
+        fatal_error('--enable-ai-chatbots requires Matomo 5.13 or later, found version "%s".' % version.get('value'))
+    if not plugin.get('value'):
+        fatal_error('--enable-ai-chatbots requires the BotTracking plugin, please activate it in Matomo.')
 
 def fatal_error(error, filename=None, lineno=None):
     print('Fatal error: %s' % error, file=sys.stderr)
