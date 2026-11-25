@@ -115,6 +115,20 @@ EXCLUDED_USER_AGENTS = (
     'googlestackdrivermonitoring',
 )
 
+# User agents of AI chatbots that fetch a page because a person asked them to.
+# This list must match the patterns Matomo's BotTracking plugin detects
+# (plugins/BotTracking/BotDetector.php); Matomo discards any other user agent
+# sent with recMode=1. User agents must be lowercase.
+AI_CHATBOT_USER_AGENTS = (
+    'chatgpt-user',
+    'mistralai-user',
+    'gemini-deep-research',
+    'claude-user',
+    'perplexity-user',
+    'google-gemininotebook',
+    'google-notebooklm',
+)
+
 MATOMO_DEFAULT_MAX_ATTEMPTS = 3
 MATOMO_DEFAULT_DELAY_AFTER_FAILURE = 10
 DEFAULT_SOCKET_TIMEOUT = 300
@@ -849,6 +863,16 @@ class Configuration:
             help="Track bots. All bot visits will have a Custom Variable set with name='Bot' and value='$Bot_user_agent_here$'"
         )
         parser.add_argument(
+            '--enable-ai-chatbots', dest='enable_ai_chatbots',
+            action='store_true', default=False,
+            help="Track requests made by AI chatbots on behalf of a person (ChatGPT-User, Claude-User, "
+                 "Perplexity-User, ...) in Matomo's AI chatbot reports. Requires Matomo 5.13 or later "
+                 "with the BotTracking plugin activated. "
+                 "These requests are sent as bot requests (recMode=1) including their HTTP status code, "
+                 "so they never create visits, whatever --enable-bots, --enable-http-errors and "
+                 "--enable-http-redirects are set to"
+        )
+        parser.add_argument(
             '--enable-http-errors', dest='enable_http_errors',
             action='store_true', default=False,
             help="Track HTTP errors (status code 4xx or 5xx)"
@@ -1500,6 +1524,8 @@ class Statistics:
         self.count_lines_downloads = self.Counter()
         # Ignored downloads when --download-extensions is used
         self.count_lines_skipped_downloads = self.Counter()
+        # Requests by AI chatbots, sent to the AI chatbot reports (--enable-ai-chatbots)
+        self.count_lines_ai_chatbots = self.Counter()
 
         # Misc
         self.dates_recorded = set()
@@ -1555,7 +1581,7 @@ The following lines were not tracked by Matomo, either due to a malformed tracke
 
     %(count_lines_recorded)d requests imported successfully
     %(count_lines_downloads)d requests were downloads
-    %(total_lines_ignored)d requests ignored:
+%(ai_chatbots_summary)s    %(total_lines_ignored)d requests ignored:
         %(count_lines_skipped_http_errors)d HTTP errors
         %(count_lines_skipped_http_redirects)d HTTP redirects
         %(count_lines_invalid)d invalid log lines
@@ -1592,6 +1618,10 @@ Processing your log data
 
     'count_lines_recorded': self.count_lines_recorded.value,
     'count_lines_downloads': self.count_lines_downloads.value,
+    'ai_chatbots_summary': (
+        '    %d requests were sent as AI chatbot requests (not as visits)\n' % self.count_lines_ai_chatbots.value
+        if config.options.enable_ai_chatbots else ''
+    ),
     'total_lines_ignored': sum([
             self.count_lines_invalid.value,
             self.count_lines_filtered.value,
@@ -2301,6 +2331,13 @@ class Recorder:
         if hit.length:
             args['bw_bytes'] = hit.length
 
+        if hit.is_ai_chatbot:
+            # recMode=1: Matomo only records the request in the AI chatbot reports
+            # and never creates a visit from it.
+            args['recMode'] = '1'
+            args['http_status'] = hit.status
+            args['source'] = 'log-analytics'
+
         # convert custom variable args to JSON
         if 'cvar' in args and not isinstance(args['cvar'], str):
             args['cvar'] = json.dumps(args['cvar'])
@@ -2503,9 +2540,14 @@ class Parser:
 
     def check_user_agent(self, hit):
         user_agent = hit.user_agent.lower()
-        for s in itertools.chain(EXCLUDED_USER_AGENTS, config.options.excluded_useragents):
+        # AI chatbots are bots on purpose, only honour the user's own exclusions.
+        excluded = config.options.excluded_useragents
+        if not hit.is_ai_chatbot:
+            excluded = itertools.chain(EXCLUDED_USER_AGENTS, excluded)
+        for s in excluded:
             if s in user_agent:
-                if config.options.enable_bots:
+                # --enable-bots would make a visit, so excluded AI chatbots are always skipped.
+                if config.options.enable_bots and not hit.is_ai_chatbot:
                     hit.is_robot = True
                     return True
                 else:
@@ -2514,6 +2556,9 @@ class Parser:
         return True
 
     def check_http_error(self, hit):
+        # AI chatbot requests keep their status code in the AI chatbot reports.
+        if hit.is_ai_chatbot:
+            return True
         if hit.status[0] in ('4', '5'):
             if config.options.replay_tracking:
                 # process error logs for replay tracking, since we don't care if matomo error-ed the first time
@@ -2527,6 +2572,8 @@ class Parser:
         return True
 
     def check_http_redirect(self, hit):
+        if hit.is_ai_chatbot:
+            return True
         if hit.status[0] == '3' and hit.status != '304':
             if config.options.enable_http_redirects:
                 hit.is_redirect = True
@@ -2764,6 +2811,7 @@ class Parser:
                 full_path=format.get('path'),
                 is_download=False,
                 is_robot=False,
+                is_ai_chatbot=False,
                 is_error=False,
                 is_redirect=False,
                 args={},
@@ -2875,6 +2923,10 @@ class Parser:
             except:
                 pass
 
+            if config.options.enable_ai_chatbots and not config.options.replay_tracking:
+                user_agent = hit.user_agent.lower()
+                hit.is_ai_chatbot = any(s in user_agent for s in AI_CHATBOT_USER_AGENTS)
+
             # Check if the hit must be excluded.
             if not all((method(hit) for method in self.check_methods)):
                 continue
@@ -2924,6 +2976,9 @@ class Parser:
                 filtered_line(line, reason)
                 continue
 
+            if hit.is_ai_chatbot:
+                stats.count_lines_ai_chatbots.increment()
+
             hits.append(hit)
 
             if len(hits) >= config.options.recorder_max_payload_size * len(Recorder.recorders):
@@ -2968,6 +3023,9 @@ def main():
     if config.options.show_progress:
         stats.start_monitor()
 
+    if config.options.enable_ai_chatbots:
+        check_ai_chatbot_support()
+
     recorders = Recorder.launch(config.options.recorders)
 
     try:
@@ -2984,6 +3042,26 @@ def main():
         stats.stop_monitor()
 
     stats.print_summary()
+
+def check_ai_chatbot_support():
+    # Matomo before 5.7 ignores recMode and would turn AI chatbot requests into visits.
+    # Before 5.13 it does not know all of AI_CHATBOT_USER_AGENTS and keeps excluded
+    # query parameters in the reports. Without the BotTracking plugin it discards
+    # all recMode=1 requests.
+    try:
+        version = matomo.call_api('API.getMatomoVersion')
+        plugin = matomo.call_api('API.isPluginActivated', pluginName='BotTracking')
+    except MatomoHttpBase.Error as e:
+        fatal_error('cannot check if Matomo supports --enable-ai-chatbots: %s' % e)
+    for result in (version, plugin):
+        if result.get('result') == 'error':
+            fatal_error('cannot check if Matomo supports --enable-ai-chatbots: %s' % result.get('message'))
+
+    match = re.match(r'(\d+)\.(\d+)', version.get('value', ''))
+    if not match or tuple(map(int, match.groups())) < (5, 13):
+        fatal_error('--enable-ai-chatbots requires Matomo 5.13 or later, found version "%s".' % version.get('value'))
+    if not plugin.get('value'):
+        fatal_error('--enable-ai-chatbots requires the BotTracking plugin, please activate it in Matomo.')
 
 def fatal_error(error, filename=None, lineno=None):
     print('Fatal error: %s' % error, file=sys.stderr)

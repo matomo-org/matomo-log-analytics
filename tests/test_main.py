@@ -7,6 +7,8 @@ from collections import OrderedDict
 
 import import_logs
 
+RealRecorder = import_logs.Recorder
+
 
 # utility functions
 def add_junk_to_file(path):
@@ -168,6 +170,7 @@ class Options(object):
         self.excluded_paths = []
         self.excluded_useragents = []
         self.enable_bots = []
+        self.enable_ai_chatbots = False
         self.force_lowercase_path = False
         self.included_paths = []
         self.enable_http_errors = False
@@ -1693,3 +1696,114 @@ def test_static_resolver_reports_api_error_answered_with_4xx():
     finally:
         import_logs.matomo = original_matomo
         import_logs.fatal_error = original_fatal_error
+
+def _parse_ai_chatbots_log(enable_ai_chatbots):
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.format = None
+    import_logs.config.options.enable_ai_chatbots = enable_ai_chatbots
+    import_logs.config.options.enable_static = False
+    import_logs.config.options.download_extensions = 'pdf'
+    import_logs.config.options.enable_http_redirects = False
+    import_logs.config.options.replay_tracking = False
+    import_logs.resolver = Resolver()
+    import_logs.Recorder = Recorder()
+    Recorder.recorders = []
+    import_logs.parser = import_logs.Parser()
+    import_logs.parser.parse('logs/ai_chatbots.log')
+    return Recorder.recorders
+
+def test_ai_chatbots_disabled_by_default():
+    """Without --enable-ai-chatbots nothing changes: Mistral is a robot, errors and redirects are skipped."""
+    hits = _parse_ai_chatbots_log(False)
+
+    assert [hit.path for hit in hits] == ['/', '/page']
+    assert not any(hit.is_ai_chatbot for hit in hits)
+
+def test_ai_chatbots_are_detected():
+    """AI chatbot requests pass the bot, error and redirect filters, static files are still skipped."""
+    hits = _parse_ai_chatbots_log(True)
+
+    assert [(hit.path, hit.is_ai_chatbot) for hit in hits] == [
+        ('/', False),
+        ('/page', True),
+        ('/gone', True),
+        ('/old', True),
+        ('/doc.pdf', True),
+    ]
+    assert import_logs.stats.count_lines_skipped_user_agent.value == 1  # Googlebot
+    assert import_logs.stats.count_lines_static.value == 1  # ChatGPT-User fetching /logo.png
+    assert import_logs.stats.count_lines_ai_chatbots.value == 4
+
+def test_ai_chatbots_honour_user_agent_exclude():
+    """--useragent-exclude skips AI chatbots, also with --enable-bots."""
+    for enable_bots in (False, True):
+        import_logs.config = Config()
+        import_logs.config.options.excluded_useragents = ['claude-user']
+        import_logs.config.options.enable_bots = enable_bots
+        hit = import_logs.Hit(user_agent='Claude-User/1.0', is_ai_chatbot=True, full_path='/')
+        import_logs.stats = import_logs.Statistics()
+
+        assert not import_logs.Parser().check_user_agent(hit)
+
+def test_ai_chatbot_hit_args():
+    """AI chatbot requests are sent as bot requests (recMode=1) with their status code."""
+    hits = _parse_ai_chatbots_log(True)
+
+    class SiteResolver(object):
+        def resolve(self, hit):
+            return 1, 'http://www.example.com'
+
+    import_logs.resolver = SiteResolver()
+    import_logs.config.options.reverse_dns = False
+    import_logs.config.options.strip_query_string = False
+    import_logs.config.options.title_category_delimiter = '/'
+    recorder = RealRecorder.__new__(RealRecorder)
+    args = [recorder._get_hit_args(hit) for hit in hits]
+
+    assert 'recMode' not in args[0]
+    assert args[1]['recMode'] == '1'
+    assert args[1]['http_status'] == '200'
+    assert args[1]['bw_bytes'] == 512
+    assert args[1]['source'] == 'log-analytics'
+    assert args[2]['http_status'] == '404'
+    assert args[4]['download'].endswith('/doc.pdf')
+
+def _check_ai_chatbot_support(monkeypatch, version={'value': '6.0.0'}, plugin={'value': True}, error=None):
+    class FatalError(Exception):
+        pass
+
+    def fatal_error(message):
+        raise FatalError(message)
+
+    class FakeMatomo(object):
+        def call_api(self, method, **kwargs):
+            if error:
+                raise error
+            if method == 'API.isPluginActivated':
+                assert kwargs == {'pluginName': 'BotTracking'}
+                return plugin
+            return version
+
+    monkeypatch.setattr(import_logs, 'matomo', FakeMatomo(), raising=False)
+    monkeypatch.setattr(import_logs, 'fatal_error', fatal_error)
+    try:
+        import_logs.check_ai_chatbot_support()
+    except FatalError as e:
+        return str(e)
+
+def test_ai_chatbots_require_matomo_5_13(monkeypatch):
+    for version in ('5.13.0', '6.0.0-b1', '10.0.0'):
+        assert _check_ai_chatbot_support(monkeypatch, version={'value': version}) is None
+    for version in ('5.6.2', '5.12.1', ''):
+        assert 'requires Matomo 5.13' in _check_ai_chatbot_support(monkeypatch, version={'value': version})
+
+def test_ai_chatbots_require_bot_tracking_plugin(monkeypatch):
+    message = _check_ai_chatbot_support(monkeypatch, plugin={'value': False})
+    assert 'BotTracking plugin' in message
+
+def test_ai_chatbots_support_check_handles_api_errors(monkeypatch):
+    message = _check_ai_chatbot_support(monkeypatch, version={'result': 'error', 'message': 'no access'})
+    assert 'no access' in message
+    message = _check_ai_chatbot_support(monkeypatch, error=import_logs.MatomoHttpBase.Error('HTTP 401', 401))
+    assert 'HTTP 401' in message

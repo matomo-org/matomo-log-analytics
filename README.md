@@ -200,6 +200,24 @@ Apache LogFormat "%h %l %u %t \"%r\" %>s %b %D"
 
 Note: the group `<generation_time_milli>` is also available if your server logs generation time in milliseconds rather than microseconds.
 
+### How do I import requests made by AI chatbots?
+
+Since Matomo 5.7, the AI chatbot reports show how often AI chatbots such as ChatGPT, Claude or Perplexity fetch your pages because a person asked them to.
+Add `--enable-ai-chatbots` to import these requests from your logs as well:
+
+```
+python /path/to/matomo/misc/log-analytics/import_logs.py --url=http://mysite/matomo/ --enable-ai-chatbots access.log
+```
+
+The script detects the same user agents as Matomo's AI chatbot reports. Like Matomo, it trusts the user agent, so anyone can pretend to be an AI chatbot; use `--useragent-exclude` to leave out a chatbot you do not want to count.
+It sends these requests as bot requests (`recMode=1`) together with their HTTP status code, response size and generation time.
+They never create visits, so your visitor numbers stay the same. For the same reason they are imported even when they returned an HTTP error or redirect, and even without `--enable-bots`.
+Requests for static files are skipped unless you use `--enable-static`, and downloads follow `--download-extensions` as usual.
+
+The script stops with an error if your Matomo is older than 5.13 or the BotTracking plugin is not activated. Older versions record these requests as visits or do not handle all of them correctly, and without the plugin Matomo discards them.
+
+Run the import for a log file only once: importing it twice counts the AI chatbot requests twice.
+
 ### How do I setup Nginx to directly import to Matomo via syslog?
 
 Since nginx 1.7.1 you can [log to syslog](http://nginx.org/en/docs/syslog.html) and import them live to Matomo.
