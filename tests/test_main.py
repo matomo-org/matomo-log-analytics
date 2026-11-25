@@ -464,6 +464,22 @@ def check_traefik_groups(groups):
     assert groups['server_url'] == 'http://172.19.0.4:80'
     assert groups['generation_time_milli'] == '29'
 
+def check_bunny_groups(groups):
+    assert groups['cache_status'] == 'MISS'
+    assert groups['status'] == '200'
+    assert groups['length'] == '128479'
+    assert groups['pull_zone_id'] == '1234567'
+    assert groups['ip'] == '1.2.3.4'
+    assert groups['referrer'] == 'https://example.com'
+    assert groups['url'] == 'https://www.example.org/path?query=string'
+    assert groups['edge_location'] == 'DE'
+    assert groups['user_agent'] == 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+    assert groups['request_id'] == '289735f336bd4fe775624ea7f6a4cc58'
+    assert groups['country'] == 'DE'
+    assert groups['path'] == '/path'
+    assert groups['host'] == 'www.example.org'
+    assert groups['query_string'] == 'query=string'
+
 # parsing tests
 def test_format_parsing():
     # test format regex parses correctly
