@@ -7,6 +7,10 @@ from collections import OrderedDict
 
 import import_logs
 
+# Keep a reference to the real Recorder class before any test replaces import_logs.Recorder
+# with a mock instance, so unit tests can call _get_hit_args() directly.
+_RealRecorder = import_logs.Recorder
+
 
 # utility functions
 def add_junk_to_file(path):
@@ -167,7 +171,12 @@ class Options(object):
         self.hostnames = []
         self.excluded_paths = []
         self.excluded_useragents = []
-        self.enable_bots = []
+        self.enable_bots = False
+        self.bot_custom_dimension = None
+        self.use_bulk_tracking = True
+        self.strip_query_string = False
+        self.reverse_dns = False
+        self.title_category_delimiter = '/'
         self.force_lowercase_path = False
         self.included_paths = []
         self.enable_http_errors = False
@@ -201,6 +210,14 @@ class Resolver(object):
     """Mock resolver which doesn't check connection to real piwik."""
     def check_format(self, format_):
         pass
+
+class BotResolver(object):
+    """Mock resolver for bot tracking tests that returns a fixed site ID."""
+    def check_format(self, format_):
+        pass
+
+    def resolve(self, hit):
+        return (1, 'http://example.com')
 
 class Recorder(object):
     """Mock recorder which collects hits but doesn't put their in database."""
@@ -1591,3 +1608,83 @@ def test_bz2_parsing():
     assert hits[0]['status'] == '200'
     assert hits[0]['length'] == 444
     assert hits[0]['userid'] == 'theboss'
+    
+    
+def _make_bot_hit(user_agent, is_robot=True):
+    """Construct a minimal Hit object for bot tracking unit tests."""
+    return import_logs.Hit(
+        args={},
+        ip='1.2.3.4',
+        host='example.com',
+        path='/page',
+        query_string='',
+        referrer='',
+        user_agent=user_agent,
+        date=datetime.datetime(2024, 1, 1, 0, 0, 0),
+        status='200',
+        length=100,
+        is_robot=is_robot,
+        is_error=False,
+        is_redirect=False,
+        is_download=False,
+        generation_time_milli=0,
+        event_category=None,
+        event_action=None,
+        event_name=None,
+        filename='test.log',
+        lineno=1,
+        full_path='/page',
+    )
+
+
+def test_get_bot_name_for_custom_dimension():
+    """Test bot name lookup from user agent string."""
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; GPTBot/1.0)') == 'GPTBot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; ClaudeBot/1.0)') == 'ClaudeBot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; Googlebot/2.1)') == 'Googlebot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (compatible; bingbot/2.0)') == 'Bingbot'
+    assert import_logs._get_bot_name_for_custom_dimension('Mozilla/5.0 (Windows NT 10.0) Chrome/120.0') == 'Other Bot'
+
+
+def test_enable_bots_custom_variable_fallback():
+    """--enable-bots without --bot-custom-dimension stores bot UA in a Custom Variable (backward compat)."""
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.enable_bots = True
+    import_logs.config.options.bot_custom_dimension = None
+    import_logs.resolver = BotResolver()
+    Recorder.recorders = []
+
+    bot_hit = _make_bot_hit('Mozilla/5.0 (compatible; GPTBot/1.0)')
+    recorder = _RealRecorder()
+    recorder._get_hit_args(bot_hit)
+
+    assert 'dimension1' not in bot_hit.args
+    assert '_cvar' in bot_hit.args
+
+    non_bot_hit = _make_bot_hit('Mozilla/5.0 Chrome/120.0', is_robot=False)
+    recorder._get_hit_args(non_bot_hit)
+
+    assert 'dimension1' not in non_bot_hit.args
+    assert '_cvar' in non_bot_hit.args
+
+
+def test_enable_bots_custom_dimension():
+    """--enable-bots --bot-custom-dimension=1 stores classified bot name in Custom Dimension 1."""
+    import_logs.stats = import_logs.Statistics()
+    import_logs.config = Config()
+    import_logs.config.options.enable_bots = True
+    import_logs.config.options.bot_custom_dimension = 1
+    import_logs.resolver = BotResolver()
+    Recorder.recorders = []
+
+    bot_hit = _make_bot_hit('Mozilla/5.0 (compatible; GPTBot/1.0)')
+    recorder = _RealRecorder()
+    recorder._get_hit_args(bot_hit)
+
+    assert bot_hit.args.get('dimension1') == 'GPTBot'
+
+    non_bot_hit = _make_bot_hit('Mozilla/5.0 Chrome/120.0', is_robot=False)
+    recorder._get_hit_args(non_bot_hit)
+
+    assert non_bot_hit.args.get('dimension1') == 'Not a Bot'

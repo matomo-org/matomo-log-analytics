@@ -84,35 +84,148 @@ DOWNLOAD_EXTENSIONS = set((
 # user agents must be lowercase
 EXCLUDED_USER_AGENTS = (
     'adsbot-google',
+    'amazonbot',
+    'anthropic-ai',
+    'applebot',
+    'archive.org_bot',
+    'aranet-searchbot',
     'ask jeeves',
+    'awariobot',
     'baidubot',
+    'bitsightbot',
     'bot-',
     'bot/',
+    'bytespider',
+    'ccbot',
     'ccooter/',
+    'chatgpt-user',
+    'claude-web',
+    'claudebot',
+    'codabot',
+    'cohere-ai',
     'crawl',
     'curl',
+    'dataforseobot',
+    'diffbot',
+    'duckassistbot',
     'echoping',
     'exabot',
+    'facebookbot',
     'feed',
+    'google-extended',
     'googlebot',
+    'googleother',
     'ia_archiver',
     'java/',
     'libwww',
     'mediapartners-google',
+    'meta-externalagent',
     'msnbot',
     'netcraftsurvey',
+    'oai-searchbot',
     'panopta',
+    'petalbot',
+    'perplexitybot',
     'pingdom.com_bot_',
+    'qwantbot',
     'robot',
+    'seznambot',
+    'sleepbot',
     'spider',
     'surveybot',
+    'thinkers-bot',
+    'tiktokspider',
+    'trendictionbot',
     'twiceler',
     'voilabot',
     'yahoo',
     'yandex',
+    'youbot',
     'zabbix',
     'googlestackdrivermonitoring',
 )
+
+# Known bot user agent patterns mapped to display names, used with --bot-custom-dimension.
+# Patterns must be lowercase substrings of the user agent string.
+BOT_CUSTOM_DIMENSION_NAMES = [
+    # AI / LLM bots
+    ('GPTBot',               'gptbot'),
+    ('ChatGPT-User',         'chatgpt-user'),
+    ('OAI-SearchBot',        'oai-searchbot'),
+    ('ClaudeBot',            'claudebot'),
+    ('Claude-Web',           'claude-web'),
+    ('Anthropic-AI',         'anthropic-ai'),
+    ('Google-Extended',      'google-extended'),
+    ('GoogleOther',          'googleother'),
+    ('PerplexityBot',        'perplexitybot'),
+    ('Bytespider',           'bytespider'),
+    ('CCBot',                'ccbot'),
+    ('AmazonBot',            'amazonbot'),
+    ('Cohere-AI',            'cohere-ai'),
+    ('YouBot',               'youbot'),
+    ('Diffbot',              'diffbot'),
+    ('FacebookBot',          'facebookbot'),
+    ('DataForSeoBot',        'dataforseobot'),
+    ('PetalBot',             'petalbot'),
+    # Search engine bots
+    ('Googlebot',            'googlebot'),
+    ('AdsBot-Google',        'adsbot-google'),
+    ('Mediapartners-Google', 'mediapartners-google'),
+    ('Bingbot',              'bingbot'),
+    ('MSNBot',               'msnbot'),
+    ('Yahoo-Slurp',          'slurp'),
+    ('DuckDuckBot',          'duckduckbot'),
+    ('Baiduspider',          'baiduspider'),
+    ('YandexBot',            'yandex'),
+    ('SogouBot',             'sogou'),
+    ('Exabot',               'exabot'),
+    ('Wayback-Machine',      'ia_archiver'),
+    # SEO bots
+    ('SemrushBot',           'semrushbot'),
+    ('AhrefsBot',            'ahrefsbot'),
+    ('MJ12bot',              'mj12bot'),
+    ('DotBot',               'dotbot'),
+    ('Rogerbot',             'rogerbot'),
+    ('Blexbot',              'blexbot'),
+    ('BitSightBot',          'bitsightbot'),
+    # Other crawlers
+    ('SleepBot',             'sleepbot'),
+    ('AwarioBot',            'awariobot'),
+    ('Qwantbot',             'qwantbot'),
+    ('archive.org_bot',      'archive.org_bot'),
+    ('Aranet-SearchBot',     'aranet-searchbot'),
+    ('CodaBot',              'codabot'),
+    ('thinkers-bot',         'thinkers-bot'),
+    ('trendictionbot',       'trendictionbot'),
+    ('SeznamBot',            'seznambot'),
+    # Social media bots
+    ('Applebot',             'applebot'),
+    ('Meta-ExternalAgent',   'meta-externalagent'),
+    ('TikTokSpider',         'tiktokspider'),
+    ('FacebookExternalHit',  'facebookexternalhit'),
+    ('Twitterbot',           'twitterbot'),
+    ('LinkedInBot',          'linkedinbot'),
+    ('WhatsApp',             'whatsapp'),
+    ('TelegramBot',          'telegrambot'),
+    ('Slackbot',             'slackbot'),
+    ('Discordbot',           'discordbot'),
+    ('DuckAssistBot',        'duckassistbot'),
+    # Monitoring bots
+    ('Pingdom',              'pingdom'),
+    ('UptimeRobot',          'uptimerobot'),
+    ('Zabbix',               'zabbix'),
+    ('Panopta',              'panopta'),
+    ('NetcraftSurvey',       'netcraftsurvey'),
+    ('StackdriverMonitoring','googlestackdrivermonitoring'),
+]
+
+def _get_bot_name_for_custom_dimension(user_agent):
+    ua = user_agent.lower()
+    for name, pattern in BOT_CUSTOM_DIMENSION_NAMES:
+        if pattern in ua:
+            return name
+    return 'Other Bot'
+
 
 MATOMO_DEFAULT_MAX_ATTEMPTS = 3
 MATOMO_DEFAULT_DELAY_AFTER_FAILURE = 10
@@ -846,6 +959,14 @@ class Configuration:
             '--enable-bots', dest='enable_bots',
             action='store_true', default=False,
             help="Track bots. All bot visits will have a Custom Variable set with name='Bot' and value='$Bot_user_agent_here$'"
+        )
+        parser.add_argument(
+            '--bot-custom-dimension', dest='bot_custom_dimension',
+            type=int, default=None,
+            metavar='DIMENSION_ID',
+            help="Store the bot name in the given Custom Dimension ID instead of a Custom Variable "
+                 "(recommended for Matomo 5+ where Custom Variables are deprecated). "
+                 "Requires --enable-bots. Non-bot visits receive 'Not a Bot' in the dimension."
         )
         parser.add_argument(
             '--enable-http-errors', dest='enable_http_errors',
@@ -2218,12 +2339,19 @@ class Recorder:
         url_prefix = self._get_host_with_protocol(hit.host, main_url) if hasattr(hit, 'host') else main_url
         url = (url_prefix if path.startswith('/') else '') + path[:1024]
 
-        # handle custom variables before generating args dict
+        # handle bot tracking
         if config.options.enable_bots:
-            if hit.is_robot:
-                hit.add_visit_custom_var("Bot", hit.user_agent)
+            if config.options.bot_custom_dimension is not None:
+                dim_key = 'dimension%d' % config.options.bot_custom_dimension
+                if hit.is_robot:
+                    hit.args[dim_key] = _get_bot_name_for_custom_dimension(hit.user_agent)
+                else:
+                    hit.args[dim_key] = 'Not a Bot'
             else:
-                hit.add_visit_custom_var("Not-Bot", hit.user_agent)
+                if hit.is_robot:
+                    hit.add_visit_custom_var("Bot", hit.user_agent)
+                else:
+                    hit.add_visit_custom_var("Not-Bot", hit.user_agent)
 
         hit.add_page_custom_var("HTTP-code", hit.status)
 
@@ -2253,7 +2381,7 @@ class Recorder:
         if hit.is_download:
             args['download'] = args['url']
 
-        if config.options.enable_bots:
+        if config.options.enable_bots or config.options.bot_custom_dimension is not None:
             args['bots'] = '1'
 
         if hit.is_error or hit.is_redirect:
@@ -2484,7 +2612,7 @@ class Parser:
         user_agent = hit.user_agent.lower()
         for s in itertools.chain(EXCLUDED_USER_AGENTS, config.options.excluded_useragents):
             if s in user_agent:
-                if config.options.enable_bots:
+                if config.options.enable_bots or config.options.bot_custom_dimension is not None:
                     hit.is_robot = True
                     return True
                 else:
