@@ -40,6 +40,7 @@ import os.path
 import stat
 import queue
 import re
+import select
 import ssl
 import sys
 import threading
@@ -2716,6 +2717,13 @@ class Parser:
         hits = []
         lineno = -1
         while True:
+            has_line = lambda f: select.select([f, ], [], [], 0.0)[0]
+            if os.name == 'posix' and file == sys.stdin and not has_line(file):
+                Recorder.add_hits(hits)
+                hits = []
+                time.sleep(1)
+                continue
+
             line = file.readline()
             if not line: break
             lineno = lineno + 1
